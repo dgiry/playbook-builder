@@ -216,6 +216,37 @@
 
   </section>
 
+  <!-- ── Planning Aid Banner ──────────────────────────────────────── -->
+  <section class="max-w-4xl mx-auto px-6 pb-4 pt-0">
+    <div class="rounded-xl px-6 py-5 flex flex-col sm:flex-row items-center gap-5"
+         style="background:rgba(240,136,62,.06);border:1px solid rgba(240,136,62,.25)">
+      <!-- Label -->
+      <div class="flex-shrink-0 text-center sm:text-left">
+        <div class="text-xs font-black tracking-widest uppercase mb-1" style="color:#f0883e">📋 Planning Aid</div>
+        <div class="text-white font-bold text-sm leading-snug">AI-generated starting point.<br>Your judgment drives the response.</div>
+      </div>
+      <!-- Divider -->
+      <div class="hidden sm:block w-px self-stretch bg-orange-900/40"></div>
+      <!-- Steps -->
+      <div class="flex flex-wrap items-center justify-center gap-3 flex-1">
+        <div class="flex items-center gap-2 text-xs">
+          <span class="w-6 h-6 rounded-full flex items-center justify-center font-black text-black" style="background:#f0883e">1</span>
+          <span class="text-slate-300 font-semibold">🤖 AI builds draft</span>
+        </div>
+        <span class="text-slate-600 font-bold">→</span>
+        <div class="flex items-center gap-2 text-xs">
+          <span class="w-6 h-6 rounded-full flex items-center justify-center font-black text-black" style="background:#f0883e">2</span>
+          <span class="text-slate-300 font-semibold">🧠 Analyst reviews &amp; adapts</span>
+        </div>
+        <span class="text-slate-600 font-bold">→</span>
+        <div class="flex items-center gap-2 text-xs">
+          <span class="w-6 h-6 rounded-full flex items-center justify-center font-black text-black" style="background:#f0883e">3</span>
+          <span class="text-slate-300 font-semibold">🚒 Team executes</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- ── How It Works ───────────────────────────────────────────── -->
   <section class="max-w-4xl mx-auto px-6 py-24">
 
@@ -249,6 +280,107 @@
 
     </div>
 
+  </section>
+
+  <!-- ── Real Output Preview ──────────────────────────────────────── -->
+  <section class="max-w-4xl mx-auto px-6 pb-16">
+
+    <div class="text-center mb-8">
+      <div class="text-xs font-bold tracking-widest uppercase mb-2" style="color:#f0883e">Real output</div>
+      <h2 class="text-2xl sm:text-3xl font-black tracking-tight">This is what a phase looks like.</h2>
+      <p class="text-sm text-slate-500 mt-2">T1059.001 — PowerShell · Corporate Windows environment · Containment phase</p>
+    </div>
+
+    <!-- Phase card — realistic representation of actual tool output -->
+    <div class="rounded-xl overflow-hidden font-mono text-xs"
+         style="background:#161b22;border:1px solid rgba(48,54,61,.9)">
+
+      <!-- Phase header bar -->
+      <div class="flex items-center justify-between px-5 py-3"
+           style="background:#1c2128;border-bottom:3px solid #f0883e">
+        <div class="flex items-center gap-3">
+          <span class="text-base">🛡️</span>
+          <span class="font-black text-white tracking-wide text-sm">Phase 3 — Containment</span>
+        </div>
+        <span class="phase-badge ph-containment">🛡️ Containment</span>
+      </div>
+
+      <div class="p-5 grid grid-cols-1 md:grid-cols-2 gap-6">
+
+        <!-- Steps column -->
+        <div>
+          <div class="text-slate-500 uppercase tracking-widest text-xs font-bold mb-3">Steps</div>
+
+          <!-- Step 1 -->
+          <div class="flex gap-3 mb-4">
+            <span class="w-5 h-5 rounded flex items-center justify-center font-black text-black text-xs flex-shrink-0 mt-0.5"
+                  style="background:#f0883e">1</span>
+            <div>
+              <div class="text-slate-200 font-semibold mb-1">Isolate affected host from network</div>
+              <div class="rounded p-2 leading-relaxed" style="background:#0d1117;border:1px solid rgba(63,185,80,.2);color:#86efac">
+                <span class="text-slate-500">PS&gt;</span> Get-NetAdapter |<br>
+                &nbsp;&nbsp;Disable-NetAdapter -Confirm:$false
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 2 -->
+          <div class="flex gap-3 mb-4">
+            <span class="w-5 h-5 rounded flex items-center justify-center font-black text-black text-xs flex-shrink-0 mt-0.5"
+                  style="background:#f0883e">2</span>
+            <div>
+              <div class="text-slate-200 font-semibold mb-1">Block C2 outbound at perimeter firewall</div>
+              <div class="rounded p-2 leading-relaxed" style="background:#0d1117;border:1px solid rgba(63,185,80,.2);color:#86efac">
+                <span class="text-slate-500">PS&gt;</span> New-NetFirewallRule -DisplayName "Block C2" \<br>
+                &nbsp;&nbsp;-Direction Outbound -Action Block \<br>
+                &nbsp;&nbsp;-RemoteAddress &lt;C2_IP&gt;
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 3 -->
+          <div class="flex gap-3">
+            <span class="w-5 h-5 rounded flex items-center justify-center font-black text-black text-xs flex-shrink-0 mt-0.5"
+                  style="background:#f0883e">3</span>
+            <div>
+              <div class="text-slate-200 font-semibold mb-1">Revoke active user sessions for &lt;AFFECTED_USER&gt;</div>
+              <div class="rounded p-2 leading-relaxed" style="background:#0d1117;border:1px solid rgba(63,185,80,.2);color:#86efac">
+                <span class="text-slate-500">PS&gt;</span> Revoke-AzureADUserAllRefreshToken \<br>
+                &nbsp;&nbsp;-ObjectId "&lt;AFFECTED_USER&gt;"
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right column: evidence + escalation -->
+        <div class="flex flex-col gap-5">
+
+          <!-- Evidence checklist -->
+          <div>
+            <div class="text-slate-500 uppercase tracking-widest text-xs font-bold mb-3">🗂️ Evidence to preserve</div>
+            <div class="flex flex-col gap-2">
+              <div class="flex items-start gap-2 text-slate-300"><span class="text-slate-600">☐</span> Windows Event ID 4688 — process creation logs from host</div>
+              <div class="flex items-start gap-2 text-slate-300"><span class="text-slate-600">☐</span> PowerShell ScriptBlock logs (Event ID 4104)</div>
+              <div class="flex items-start gap-2 text-slate-300"><span class="text-slate-600">☐</span> Network flow logs — outbound connections from &lt;HOST&gt;</div>
+              <div class="flex items-start gap-2 text-slate-300"><span class="text-slate-600">☐</span> Memory dump before isolation if active malware suspected</div>
+            </div>
+          </div>
+
+          <!-- Escalation -->
+          <div class="rounded-lg p-3" style="background:rgba(248,81,73,.04);border:1px solid rgba(248,81,73,.2)">
+            <div class="text-slate-500 uppercase tracking-widest text-xs font-bold mb-2">📡 Escalate if</div>
+            <div class="flex flex-col gap-2 mb-3">
+              <div class="flex items-start gap-2 text-slate-300"><span class="text-red-500">↑</span> Lateral movement confirmed (Event ID 4648 on &gt;2 hosts)</div>
+              <div class="flex items-start gap-2 text-slate-300"><span class="text-red-500">↑</span> C2 callback confirmed to external IP after isolation</div>
+            </div>
+            <div class="text-xs font-bold" style="color:#f0883e">→ Escalate to: IR Lead + CISO</div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <p class="text-center text-xs text-slate-600 mt-4">Every phase follows this structure. Commands and evidence adapt to your environment — Corporate Windows, Cloud, Linux, Trend Vision One XDR, or OT/ICS.</p>
   </section>
 
   <!-- ── Input Modes ────────────────────────────────────────────── -->
@@ -352,11 +484,11 @@
           </div>
           <span class="tier-ai">🤖 AI</span>
         </div>
-        <div class="flex flex-col gap-1">
-          <div class="text-xs text-slate-400">• Windows Event ID 4688 logs from host</div>
-          <div class="text-xs text-slate-400">• Memory dump (lsass.dmp if applicable)</div>
-          <div class="text-xs text-slate-400">• PowerShell history file</div>
-          <div class="text-xs text-slate-500">+ more per phase</div>
+        <div class="flex flex-col gap-2">
+          <div class="text-xs text-slate-300">• Windows Event ID 4688 logs from host</div>
+          <div class="text-xs text-slate-300">• Memory dump (lsass.dmp if applicable)</div>
+          <div class="text-xs text-slate-300">• PowerShell history file</div>
+          <div class="text-xs text-slate-500 mt-1">+ more per phase, scoped to technique</div>
         </div>
       </div>
 
@@ -369,11 +501,11 @@
           </div>
           <span class="tier-ai">🤖 AI</span>
         </div>
-        <div class="flex flex-col gap-1 mb-2">
-          <div class="text-xs text-slate-400">• Evidence of lateral movement</div>
-          <div class="text-xs text-slate-400">• C2 callback confirmed external</div>
+        <div class="flex flex-col gap-2 mb-3">
+          <div class="text-xs text-slate-300">• Evidence of lateral movement detected</div>
+          <div class="text-xs text-slate-300">• C2 callback confirmed to external IP</div>
         </div>
-        <div class="text-xs font-semibold" style="color:#f0883e">↑ Escalate to: IR Lead / CISO</div>
+        <div class="text-xs font-bold" style="color:#f0883e">↑ Escalate to: IR Lead / CISO</div>
       </div>
 
       <!-- Executive Summary -->
@@ -385,7 +517,13 @@
           </div>
           <span class="tier-ai">🤖 AI</span>
         </div>
-        <p class="text-xs text-slate-400 leading-relaxed">Structured 4-point format: what was detected · which systems/accounts affected · actions taken · current status. Ready to paste into an escalation email without editing.</p>
+        <div class="flex flex-col gap-2">
+          <div class="text-xs text-slate-300">① What was detected</div>
+          <div class="text-xs text-slate-300">② Which systems / accounts affected</div>
+          <div class="text-xs text-slate-300">③ Actions taken so far</div>
+          <div class="text-xs text-slate-300">④ Current status</div>
+        </div>
+        <p class="text-xs text-slate-500 mt-2">CISO-ready. Paste directly into an escalation email.</p>
       </div>
 
       <!-- Export -->
