@@ -38,9 +38,11 @@ Given a MITRE technique, incident description, or SIGMA rule — generate a stru
 
 | Option | Values | Notes |
 |--------|--------|-------|
-| **Environment** | Corporate Windows / Hybrid / Cloud / Linux / OT-ICS | Adapts tools, commands, and log sources per env |
+| **Environment** | Corporate Windows / Hybrid / Cloud / Linux / Trend Vision One XDR / OT-ICS | Adapts tools, commands, and log sources per env |
 | **Focus** | Full playbook / Containment-focused / Recovery-focused | Weights phase depth accordingly |
 | **Model** | gpt-4o-mini (fast) / gpt-4o (best) | |
+
+**Trend Vision One XDR:** when selected, steps use native Trend Vision One features — XDR Search App queries (`processCmd`, `processFilePath`, `eventSubId`, `dst`), Response Management console, Workbench, and Observed Attack Techniques.
 
 **OT/ICS note:** when this environment is selected, every containment and eradication command is prefixed with `⚠️ Validate with OT engineering before execution` to prevent production impact.
 

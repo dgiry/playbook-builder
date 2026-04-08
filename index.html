@@ -572,6 +572,7 @@
           <option value="hybrid">Hybrid (Windows + Cloud)</option>
           <option value="cloud">Cloud (AWS / Azure / GCP)</option>
           <option value="linux">Linux / Server</option>
+          <option value="trend_xdr">Trend Vision One XDR</option>
           <option value="ot_ics">OT / ICS</option>
         </select>
       </div>
@@ -882,6 +883,7 @@ tags:
       hybrid:            'Environment: Hybrid Windows + Cloud (Azure/AWS). Include both on-prem AD steps AND cloud-side steps (Azure AD sign-in logs, AWS CloudTrail, IAM review). Split steps clearly between on-prem and cloud where relevant.',
       cloud:             'Environment: Cloud-first (AWS / Azure / GCP). Focus on cloud-native response: CloudTrail, GuardDuty, Azure AD audit logs, IAM policy review, S3/blob access logs, Security Hub. Use AWS CLI and az CLI commands where applicable.',
       linux:             'Environment: Linux / Server infrastructure. Tools: journalctl, auditd, syslog, ss, lsof, ps, find, last, who, netstat. Use real bash commands. Focus on process trees, network connections, cron jobs, SSH authorized_keys, SUID binaries.',
+      trend_xdr:         'Environment: Trend Vision One XDR. Use Trend Vision One native tools and response actions throughout: XDR Search App queries (processCmd, processFilePath, eventSubId, dst, dpt, fileHash), Response Management console for host isolation and process termination, Workbench for alert correlation, and Vision One Threat Intelligence. For investigation steps, prefer XDR Search syntax over generic SIEM queries. Reference real Trend Vision One features: Observed Attack Techniques, Executive Dashboard, Impact Scope.',
       ot_ics:            'Environment: OT/ICS. CRITICAL: prefix every containment or eradication command with the note "⚠️ Validate with OT engineering before execution — risk of production impact." Prioritize passive monitoring over active blocking. Avoid network isolation unless confirmed safe with operations team.',
     }[env];
 
