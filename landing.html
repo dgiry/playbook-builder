@@ -284,7 +284,7 @@
       <div class="mode-card">
         <div class="mode-tag">✍️ SIGMA Rule</div>
         <h3 class="font-bold text-white mb-2">Rule that just fired</h3>
-        <p class="text-sm text-slate-400 leading-relaxed mb-3">Paste the SIGMA YAML. The playbook is built around the exact detection logic — the response matches the detection, not a generic template.</p>
+        <p class="text-sm text-slate-400 leading-relaxed mb-3">Paste the SIGMA YAML — or use the <strong class="text-slate-300">Build Playbook →</strong> bridge in SIGMA Generator to arrive here pre-filled. The playbook is built around the exact detection logic, not a generic template.</p>
         <div class="text-xs font-mono p-2 rounded text-slate-400" style="background:rgba(240,136,62,.05);border:1px solid rgba(240,136,62,.15)">
           title: LSASS Access<br>
           logsource:<br>
@@ -385,7 +385,7 @@
           </div>
           <span class="tier-ai">🤖 AI</span>
         </div>
-        <p class="text-xs text-slate-400 leading-relaxed">3-4 sentences for CISO audience. No jargon. What happened, what was done, current status. Ready to paste into an incident email.</p>
+        <p class="text-xs text-slate-400 leading-relaxed">Structured 4-point format: what was detected · which systems/accounts affected · actions taken · current status. Ready to paste into an escalation email without editing.</p>
       </div>
 
       <!-- Export -->
@@ -403,6 +403,19 @@
           <span class="text-xs px-2 py-1 rounded font-mono font-semibold" style="background:rgba(255,255,255,.05);color:#94a3b8;border:1px solid rgba(255,255,255,.1)">Copy Markdown</span>
         </div>
         <p class="text-xs text-slate-500 mt-2">Ready for Notion · Confluence · Jira · ServiceNow</p>
+      </div>
+
+      <!-- OT/ICS -->
+      <div class="output-card">
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center gap-2">
+            <span class="text-xl">⚙️</span>
+            <span class="text-xs font-bold tracking-widest uppercase text-slate-400">OT / ICS Safety</span>
+          </div>
+          <span class="text-xs px-2 py-0.5 rounded font-bold" style="background:rgba(248,81,73,.08);color:#f85149;border:1px solid rgba(248,81,73,.2)">OT mode</span>
+        </div>
+        <p class="text-xs text-slate-400 leading-relaxed">When OT/ICS environment is selected, every containment and eradication command is automatically prefixed with a production-risk warning — no blind isolation steps.</p>
+        <div class="text-xs font-mono mt-2 p-2 rounded" style="background:rgba(248,81,73,.05);border:1px solid rgba(248,81,73,.15);color:#fca5a5">⚠️ Validate with OT engineering<br>before execution</div>
       </div>
 
       <!-- Post-Mortem -->
