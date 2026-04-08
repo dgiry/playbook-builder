@@ -1,0 +1,1295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Playbook Builder — Trigger an incident. Get a complete IR playbook.</title>
+  <meta name="description" content="MITRE technique, incident description, or SIGMA rule → complete 6-phase incident response playbook with actionable steps, commands, evidence checklist, and escalation criteria. AI-powered, 100% client-side.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    /* ═══════════════════════════════════════════════════
+       RESET & BASE
+    ═══════════════════════════════════════════════════ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 15px; scroll-behavior: smooth; }
+    body {
+      background: #0d1117;
+      color: #e6edf3;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ═══════════════════════════════════════════════════
+       VARIABLES
+    ═══════════════════════════════════════════════════ */
+    :root {
+      --accent:      #f0883e;
+      --accent-dim:  rgba(240,136,62,.12);
+      --accent-bdr:  rgba(240,136,62,.28);
+      --success:     #3fb950;
+      --warn:        #d29922;
+      --danger:      #f85149;
+      --purple:      #a371f7;
+      --bg0:         #0d1117;
+      --bg1:         #161b22;
+      --bg2:         #1c2128;
+      --bg3:         #21262d;
+      --border:      rgba(48,54,61,1);
+      --border-soft: rgba(48,54,61,.7);
+      --text1:       #e6edf3;
+      --text2:       #8b949e;
+      --text3:       #6e7681;
+      --radius:      10px;
+      --shadow:      0 4px 20px rgba(0,0,0,.4);
+    }
+
+    /* Phase left-border colors */
+    --phase-detection:    #58a6ff;
+    --phase-triage:       #d29922;
+    --phase-containment:  #f0883e;
+    --phase-eradication:  #f85149;
+    --phase-recovery:     #3fb950;
+    --phase-postincident: #a371f7;
+
+    /* ═══════════════════════════════════════════════════
+       LAYOUT
+    ═══════════════════════════════════════════════════ */
+    .app-header {
+      background: var(--bg1);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      height: 54px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky; top: 0; z-index: 100;
+    }
+    .header-brand { display: flex; align-items: center; gap: 10px; }
+    .header-brand .logo { font-size: 1.25rem; }
+    .header-brand .name { font-weight: 700; font-size: .95rem; color: var(--text1); }
+    .header-brand .tagline { font-size: .75rem; color: var(--text2); }
+    .header-links { display: flex; align-items: center; gap: 8px; }
+    .header-link {
+      font-size: .78rem; font-weight: 500; color: var(--text2);
+      text-decoration: none; padding: 5px 10px; border-radius: 6px;
+      transition: color .15s, background .15s;
+    }
+    .header-link:hover { color: var(--text1); background: var(--bg3); }
+
+    .main-wrap { max-width: 960px; margin: 0 auto; padding: 36px 20px 80px; }
+
+    /* ═══════════════════════════════════════════════════
+       INTRO + API KEY
+    ═══════════════════════════════════════════════════ */
+    .intro-row {
+      display: flex; align-items: flex-start; gap: 16px;
+      background: var(--bg1); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 18px 20px; margin-bottom: 24px;
+    }
+    .intro-icon { font-size: 2rem; flex-shrink: 0; line-height: 1; }
+    .intro-title { font-weight: 700; font-size: 1.05rem; margin-bottom: 4px; }
+    .intro-sub { font-size: .82rem; color: var(--text2); line-height: 1.55; }
+
+    .key-row {
+      display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+      background: var(--bg1); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 12px 16px; margin-bottom: 24px;
+    }
+    .key-label { font-size: .8rem; font-weight: 600; color: var(--text2); flex-shrink: 0; }
+    .key-input {
+      flex: 1; min-width: 220px;
+      background: var(--bg0); border: 1px solid var(--border);
+      border-radius: 7px; padding: 7px 12px;
+      color: var(--text1); font-size: .82rem; font-family: 'JetBrains Mono', monospace;
+      outline: none; transition: border-color .15s;
+    }
+    .key-input:focus { border-color: var(--accent); }
+    .key-badge { font-size: .72rem; color: var(--text3); }
+    .key-select {
+      background: var(--bg0); border: 1px solid var(--border);
+      border-radius: 7px; padding: 7px 10px;
+      color: var(--text1); font-size: .78rem; font-weight: 600;
+      cursor: pointer; outline: none; flex-shrink: 0;
+      font-family: 'Inter', sans-serif;
+    }
+    .key-select option { background: var(--bg2); }
+
+    /* ═══════════════════════════════════════════════════
+       INPUT SECTION
+    ═══════════════════════════════════════════════════ */
+    .section-label {
+      font-size: .72rem; font-weight: 700; letter-spacing: .08em;
+      text-transform: uppercase; color: var(--text3); margin-bottom: 8px;
+    }
+    .input-card {
+      background: var(--bg1); border: 1px solid var(--border);
+      border-radius: var(--radius); overflow: hidden; margin-bottom: 20px;
+    }
+    .input-tabs {
+      display: flex; border-bottom: 1px solid var(--border);
+      background: var(--bg2);
+    }
+    .input-tab {
+      padding: 9px 16px; font-size: .8rem; font-weight: 600; cursor: pointer;
+      color: var(--text2); border: none; background: none;
+      border-bottom: 2px solid transparent; margin-bottom: -1px;
+      transition: color .15s, border-color .15s;
+    }
+    .input-tab:hover { color: var(--text1); }
+    .input-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .input-body { padding: 16px; }
+    .main-textarea {
+      width: 100%; background: var(--bg0); border: 1px solid var(--border);
+      border-radius: 8px; padding: 12px 14px;
+      color: var(--text1); font-size: .85rem; font-family: 'JetBrains Mono', monospace;
+      line-height: 1.6; resize: vertical; min-height: 130px;
+      outline: none; transition: border-color .15s;
+    }
+    .main-textarea:focus { border-color: var(--accent-bdr); }
+    .main-textarea::placeholder { color: var(--text3); font-family: 'Inter', sans-serif; }
+    .examples-row { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 10px; }
+    .example-chip {
+      font-size: .75rem; font-weight: 500; color: var(--text2);
+      background: var(--bg2); border: 1px solid var(--border-soft);
+      border-radius: 6px; padding: 4px 10px; cursor: pointer;
+      transition: all .15s;
+    }
+    .example-chip:hover { color: var(--text1); border-color: var(--accent-bdr); background: var(--accent-dim); }
+
+    /* ═══════════════════════════════════════════════════
+       OPTIONS ROW
+    ═══════════════════════════════════════════════════ */
+    .options-row {
+      display: flex; gap: 12px; flex-wrap: wrap; align-items: center;
+      margin-bottom: 20px;
+    }
+    .opt-group {
+      display: flex; gap: 6px; align-items: center;
+      background: var(--bg1); border: 1px solid var(--border);
+      border-radius: 8px; padding: 6px 12px;
+    }
+    .opt-label { font-size: .75rem; color: var(--text2); font-weight: 500; flex-shrink: 0; }
+    .opt-select {
+      background: none; border: none; color: var(--text1);
+      font-size: .8rem; font-weight: 600; cursor: pointer; outline: none;
+      font-family: 'Inter', sans-serif;
+    }
+    .opt-select option { background: var(--bg2); }
+
+    /* ═══════════════════════════════════════════════════
+       GENERATE BUTTON
+    ═══════════════════════════════════════════════════ */
+    .btn-generate {
+      width: 100%; padding: 13px 24px;
+      background: var(--accent); color: #000;
+      border: none; border-radius: 9px; cursor: pointer;
+      font-size: .9rem; font-weight: 700; font-family: 'Inter', sans-serif;
+      transition: opacity .15s, transform .15s, box-shadow .15s;
+      margin-bottom: 32px;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .btn-generate:hover:not(:disabled) { opacity: .88; transform: translateY(-1px); box-shadow: 0 8px 30px rgba(240,136,62,.25); }
+    .btn-generate:disabled { opacity: .5; cursor: not-allowed; transform: none; box-shadow: none; }
+
+    /* ═══════════════════════════════════════════════════
+       HISTORY
+    ═══════════════════════════════════════════════════ */
+    .history-strip { display: flex; gap: 7px; flex-wrap: wrap; margin-bottom: 24px; }
+    .history-chip {
+      font-size: .73rem; font-weight: 500; color: var(--text2);
+      background: var(--bg1); border: 1px solid var(--border-soft);
+      border-radius: 6px; padding: 3px 9px; cursor: pointer;
+      max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      transition: all .15s;
+    }
+    .history-chip:hover { color: var(--text1); border-color: var(--accent-bdr); }
+
+    /* ═══════════════════════════════════════════════════
+       RESULTS
+    ═══════════════════════════════════════════════════ */
+    #results { display: none; }
+
+    /* ── Status bar ───────────────────────────────────── */
+    .status-bar {
+      background: var(--bg1); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 14px 18px; margin-bottom: 20px;
+      display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    }
+    .status-pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 4px 12px; border-radius: 9999px;
+      font-size: .75rem; font-weight: 700; letter-spacing: .03em;
+    }
+    .dot-pulse { width: 7px; height: 7px; border-radius: 50%; animation: pulse-dot 1.2s ease-in-out infinite; }
+    @keyframes pulse-dot { 0%,100%{opacity:1}50%{opacity:.35} }
+    .sev-critical { background:rgba(248,81,73,.12); color:#f85149; border:1px solid rgba(248,81,73,.25); }
+    .sev-high     { background:rgba(240,136,62,.12); color:#f0883e; border:1px solid rgba(240,136,62,.28); }
+    .sev-medium   { background:rgba(210,153,34,.12); color:#d29922; border:1px solid rgba(210,153,34,.25); }
+    .sev-low      { background:rgba(63,185,80,.12);  color:#3fb950; border:1px solid rgba(63,185,80,.25); }
+    .dot-critical { background:#f85149; }
+    .dot-high     { background:#f0883e; }
+    .dot-medium   { background:#d29922; }
+    .dot-low      { background:#3fb950; }
+
+    /* ── Playbook header card ─────────────────────────── */
+    .playbook-header-card {
+      background: var(--bg1); border: 1px solid var(--border);
+      border-left: 3px solid var(--accent);
+      border-radius: var(--radius); padding: 18px 20px; margin-bottom: 20px;
+    }
+    .playbook-header-title { font-size: 1.1rem; font-weight: 800; margin-bottom: 6px; }
+    .playbook-header-sub { font-size: .83rem; color: var(--text2); line-height: 1.55; margin-bottom: 12px; }
+    .badge-row { display: flex; flex-wrap: wrap; gap: 8px; }
+    .badge {
+      font-size: .72rem; font-weight: 700; padding: 3px 10px; border-radius: 9999px;
+      letter-spacing: .04em; text-transform: uppercase;
+    }
+    .badge-complexity {
+      background: var(--bg3); border: 1px solid var(--border);
+      color: var(--text2);
+    }
+
+    /* ── Executive summary ───────────────────────────── */
+    .exec-card {
+      background: var(--bg1); border: 1px solid var(--border);
+      border-left: 3px solid var(--accent);
+      border-radius: var(--radius); padding: 16px 18px; margin-bottom: 20px;
+    }
+    .exec-header {
+      display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;
+    }
+    .exec-body { font-size: .85rem; color: var(--text2); line-height: 1.75; }
+
+    /* ── MITRE grid ───────────────────────────────────── */
+    .mitre-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+    .mitre-chip {
+      display: inline-flex; flex-direction: column; gap: 2px;
+      padding: 7px 11px; border-radius: 8px;
+      background: rgba(163,113,247,.08); border: 1px solid rgba(163,113,247,.25);
+      text-decoration: none; transition: all .15s;
+    }
+    .mitre-chip:hover { background: rgba(163,113,247,.15); border-color: rgba(163,113,247,.4); }
+    .mitre-id { font-family: 'JetBrains Mono', monospace; font-size: .73rem; font-weight: 700; color: var(--purple); }
+    .mitre-tactic { font-size: .68rem; color: var(--text3); }
+
+    /* ── Recommended tools ───────────────────────────── */
+    .tools-strip {
+      display: flex; flex-wrap: wrap; gap: 8px;
+      background: var(--bg1); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 14px 16px; margin-bottom: 20px;
+    }
+    .tool-chip {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: .75rem; font-weight: 600; color: var(--text2);
+      background: var(--bg2); border: 1px solid var(--border-soft);
+      border-radius: 6px; padding: 4px 10px;
+    }
+    .tool-phase {
+      font-size: .67rem; font-weight: 700; color: var(--accent);
+      background: var(--accent-dim); border-radius: 4px; padding: 1px 5px;
+    }
+
+    /* ═══════════════════════════════════════════════════
+       PHASE CARDS
+    ═══════════════════════════════════════════════════ */
+    .phases-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
+      margin-bottom: 20px;
+    }
+    @media(max-width:680px){ .phases-grid{ grid-template-columns:1fr; } }
+
+    .phase-card {
+      background: var(--bg1); border: 1px solid var(--border);
+      border-radius: var(--radius); overflow: hidden;
+    }
+    .phase-header {
+      padding: 11px 14px; border-bottom: 1px solid var(--border);
+      background: var(--bg2);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .phase-icon { font-size: 1rem; }
+    .phase-name { font-size: .82rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+    .phase-objective { font-size: .78rem; color: var(--text2); margin-top: 2px; }
+    .phase-body { padding: 14px; }
+
+    /* Steps */
+    .steps-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 14px; }
+    .step-item {}
+    .step-action {
+      font-size: .82rem; font-weight: 700; color: var(--text1);
+      display: flex; align-items: baseline; gap: 6px; margin-bottom: 3px;
+    }
+    .step-num {
+      font-size: .7rem; font-weight: 800; color: var(--accent);
+      background: var(--accent-dim); border-radius: 4px;
+      padding: 1px 6px; flex-shrink: 0; font-family: 'JetBrains Mono', monospace;
+    }
+    .step-detail { font-size: .79rem; color: var(--text2); line-height: 1.55; padding-left: 1.3rem; }
+
+    /* Command blocks */
+    .cmd-block {
+      background: var(--bg0); border: 1px solid var(--border);
+      border-radius: 7px; margin-top: 8px; margin-left: 1.3rem; overflow: hidden;
+    }
+    .cmd-block-header {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 4px 10px; background: var(--bg2);
+      border-bottom: 1px solid var(--border);
+    }
+    .cmd-type-label {
+      font-size: .67rem; font-weight: 800; text-transform: uppercase;
+      letter-spacing: .08em;
+    }
+    .cmd-type-spl        { color: #00a3e0; }
+    .cmd-type-kql        { color: #4fc3f7; }
+    .cmd-type-bash       { color: #3fb950; }
+    .cmd-type-powershell { color: #569cd6; }
+    .cmd-type-python     { color: #ffd700; }
+    .cmd-type-sql        { color: #d29922; }
+    .cmd-type-null, .cmd-type-other { color: var(--text3); }
+    .cmd-block pre {
+      margin: 0; padding: 10px 12px;
+      font-family: 'JetBrains Mono', monospace; font-size: .77rem;
+      line-height: 1.55; color: #a5d6ff;
+      white-space: pre-wrap; overflow-wrap: anywhere;
+    }
+
+    /* Evidence + Escalation sub-sections */
+    .phase-sub { margin-bottom: 10px; }
+    .phase-sub:last-child { margin-bottom: 0; }
+    .phase-sub-label {
+      font-size: .67rem; font-weight: 800; text-transform: uppercase;
+      letter-spacing: .07em; color: var(--text3); margin-bottom: 6px;
+    }
+    .phase-sub ul { padding-left: 1.1rem; display: flex; flex-direction: column; gap: 3px; }
+    .phase-sub li { font-size: .78rem; color: var(--text2); line-height: 1.5; }
+    .escalation-target {
+      font-size: .75rem; font-weight: 600; color: var(--accent);
+      margin-top: 5px; display: flex; align-items: center; gap: 5px;
+    }
+    .phase-divider {
+      border: none; border-top: 1px solid var(--border-soft); margin: 12px 0;
+    }
+
+    /* ═══════════════════════════════════════════════════
+       LESSONS LEARNED
+    ═══════════════════════════════════════════════════ */
+    .lessons-card {
+      background: var(--bg1); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 16px 18px; margin-bottom: 20px;
+    }
+    .lessons-list { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+    .lesson-item {
+      display: flex; align-items: flex-start; gap: 10px;
+      font-size: .82rem; color: var(--text2); line-height: 1.5;
+      cursor: pointer;
+    }
+    .lesson-item input[type="checkbox"] {
+      margin-top: 2px; flex-shrink: 0; accent-color: var(--accent);
+      width: 14px; height: 14px; cursor: pointer;
+    }
+    .lesson-item.checked { color: var(--text3); text-decoration: line-through; }
+
+    /* ═══════════════════════════════════════════════════
+       COPY BUTTON
+    ═══════════════════════════════════════════════════ */
+    .btn-copy {
+      font-size: .72rem; font-weight: 600; color: var(--text2);
+      background: var(--bg3); border: 1px solid var(--border);
+      border-radius: 6px; padding: 3px 8px; cursor: pointer;
+      transition: all .15s; font-family: 'Inter', sans-serif; white-space: nowrap;
+    }
+    .btn-copy:hover { color: var(--text1); border-color: var(--accent-bdr); }
+    .btn-copy.copied { color: var(--success); border-color: rgba(63,185,80,.3); }
+
+    /* ═══════════════════════════════════════════════════
+       EXPORT BAR
+    ═══════════════════════════════════════════════════ */
+    .export-bar {
+      display: flex; align-items: center; justify-content: space-between;
+      background: var(--accent-dim); border: 1px solid var(--accent-bdr);
+      border-radius: var(--radius); padding: 12px 16px; margin-bottom: 20px;
+      flex-wrap: wrap; gap: 10px;
+    }
+    .export-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .btn-export {
+      font-size: .78rem; font-weight: 600; color: var(--accent);
+      background: var(--bg1); border: 1px solid var(--accent-bdr);
+      border-radius: 7px; padding: 6px 13px; cursor: pointer;
+      transition: all .15s; font-family: 'Inter', sans-serif;
+    }
+    .btn-export:hover { background: var(--accent-dim); }
+    .btn-bridge {
+      font-size: .78rem; font-weight: 600; color: var(--text2);
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: 7px; padding: 6px 13px; cursor: pointer;
+      text-decoration: none; transition: all .15s; font-family: 'Inter', sans-serif;
+    }
+    .btn-bridge:hover { color: var(--text1); border-color: var(--border); }
+
+    /* ═══════════════════════════════════════════════════
+       LOADING + ERROR
+    ═══════════════════════════════════════════════════ */
+    #loading { display: none; }
+    .spinner-wrap {
+      display: flex; flex-direction: column; align-items: center; gap: 16px;
+      padding: 48px 24px;
+    }
+    .spinner {
+      width: 40px; height: 40px; border-radius: 50%;
+      border: 3px solid var(--bg3); border-top-color: var(--accent);
+      animation: spin .7s linear infinite;
+    }
+    @keyframes spin { to{ transform: rotate(360deg); } }
+    .spinner-text { font-size: .85rem; color: var(--text2); }
+    .error-box {
+      display: none; background: rgba(248,81,73,.07);
+      border: 1px solid rgba(248,81,73,.25);
+      border-radius: var(--radius); padding: 14px 16px; margin-bottom: 20px;
+      font-size: .85rem; color: #fca5a5;
+    }
+
+    /* ═══════════════════════════════════════════════════
+       SCROLLBAR + TOAST + FOOTER
+    ═══════════════════════════════════════════════════ */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg1); }
+    ::-webkit-scrollbar-thumb { background: var(--bg3); border-radius: 3px; }
+    .toast {
+      position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: 10px; padding: 10px 18px;
+      font-size: .82rem; font-weight: 600; color: var(--text1);
+      box-shadow: var(--shadow);
+      opacity: 0; transform: translateY(10px);
+      transition: opacity .2s, transform .2s; pointer-events: none;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .site-footer {
+      border-top: 1px solid var(--border); padding: 16px 24px;
+      text-align: center; font-size: .75rem; color: var(--text3);
+    }
+    .footer-link { color: var(--text3); text-decoration: none; transition: color .15s; }
+    .footer-link:hover { color: var(--text2); }
+  </style>
+</head>
+<body>
+
+  <!-- ── Header ───────────────────────────────────────────────── -->
+  <header class="app-header">
+    <div class="header-brand">
+      <span class="logo">📖</span>
+      <div>
+        <div class="name">Playbook Builder</div>
+        <div class="tagline">Trigger an incident. Get a complete IR playbook.</div>
+      </div>
+    </div>
+    <nav class="header-links">
+      <a href="https://dgiry.github.io/alert-explainer" class="header-link">🚨 Alert Explainer</a>
+      <a href="https://dgiry.github.io/sigma-generator" class="header-link">✍️ SIGMA Generator</a>
+      <a href="https://dgiry.github.io/ioc-pivot"       class="header-link">🔭 IOC Pivot</a>
+    </nav>
+  </header>
+
+  <!-- ── Main ─────────────────────────────────────────────────── -->
+  <main class="main-wrap">
+
+    <!-- Intro -->
+    <div class="intro-row">
+      <div class="intro-icon">📖</div>
+      <div>
+        <div class="intro-title">Playbook Builder</div>
+        <div class="intro-sub">
+          Give a MITRE technique, incident description, or SIGMA rule — get a complete 6-phase incident response playbook with actionable steps, runnable commands, forensic evidence checklist, escalation criteria, and tool recommendations. 100% client-side. No data sent anywhere except OpenAI.
+        </div>
+      </div>
+    </div>
+
+    <!-- API Key + Model -->
+    <div class="key-row">
+      <span class="key-label">🔑 OpenAI API Key</span>
+      <input type="password" id="api-key" class="key-input" placeholder="sk-..." autocomplete="off">
+      <select id="model-select" class="key-select">
+        <option value="gpt-4o-mini">gpt-4o-mini (fast)</option>
+        <option value="gpt-4o">gpt-4o (best)</option>
+      </select>
+      <span class="key-badge">Stored in localStorage · Never transmitted except to OpenAI</span>
+    </div>
+
+    <!-- Error -->
+    <div class="error-box" id="error-box"></div>
+
+    <!-- Input card -->
+    <div class="input-card">
+      <div class="input-tabs">
+        <button class="input-tab active" data-tab="technique" onclick="switchTab('technique')">🎯 Technique</button>
+        <button class="input-tab" data-tab="incident"  onclick="switchTab('incident')">📋 Incident</button>
+        <button class="input-tab" data-tab="sigma"     onclick="switchTab('sigma')">✍️ SIGMA Rule</button>
+      </div>
+
+      <div class="input-body">
+        <!-- Technique tab -->
+        <div id="tab-technique">
+          <textarea class="main-textarea" id="input-technique" rows="5"
+            placeholder="Enter a MITRE ATT&CK technique ID or name…&#10;&#10;Examples:&#10;• T1059.001 — Command and Scripting Interpreter: PowerShell&#10;• T1003.001 — LSASS Memory&#10;• T1486 — Data Encrypted for Impact (ransomware)&#10;• T1190 — Exploit Public-Facing Application"></textarea>
+          <div class="examples-row">
+            <span class="section-label" style="margin-bottom:0;align-self:center">Examples:</span>
+            <button class="example-chip" onclick="loadExample('ps_exec')">T1059.001 – PowerShell</button>
+            <button class="example-chip" onclick="loadExample('lsass')">T1003.001 – LSASS Dump</button>
+            <button class="example-chip" onclick="loadExample('ransomware')">T1486 – Ransomware</button>
+            <button class="example-chip" onclick="loadExample('exploit')">T1190 – Public App Exploit</button>
+            <button class="example-chip" onclick="loadExample('valid_accounts')">T1078 – Valid Accounts</button>
+          </div>
+        </div>
+
+        <!-- Incident tab -->
+        <div id="tab-incident" style="display:none">
+          <textarea class="main-textarea" id="input-incident" rows="6"
+            placeholder="Describe what happened or what you're investigating…&#10;&#10;Examples:&#10;• Ransomware alert fired on a file server. Encrypted files detected in C:\Users\. Single endpoint isolated.&#10;• Encoded PowerShell detected by EDR making outbound HTTPS connection to 185.x.x.x&#10;• Multiple failed logins from foreign IP followed by successful auth. Account: svc_backup.&#10;• PsExec lateral movement detected from workstation WS-042 to domain controller DC-01."></textarea>
+          <div class="examples-row">
+            <span class="section-label" style="margin-bottom:0;align-self:center">Examples:</span>
+            <button class="example-chip" onclick="loadExample('ransomware_incident')">Ransomware on file server</button>
+            <button class="example-chip" onclick="loadExample('c2_callback')">Encoded PS + C2 callback</button>
+            <button class="example-chip" onclick="loadExample('brute_force')">Brute force + successful login</button>
+            <button class="example-chip" onclick="loadExample('lateral_movement')">PsExec lateral movement</button>
+          </div>
+        </div>
+
+        <!-- SIGMA tab -->
+        <div id="tab-sigma" style="display:none">
+          <textarea class="main-textarea" id="input-sigma" rows="10"
+            placeholder="Paste a SIGMA detection rule (YAML)…&#10;&#10;The playbook will be built around the exact detection logic of the rule — what it detects, when it fires, and how to respond when it does."></textarea>
+          <div class="examples-row">
+            <span class="section-label" style="margin-bottom:0;align-self:center">Examples:</span>
+            <button class="example-chip" onclick="loadExample('sigma_ps')">PowerShell download rule</button>
+            <button class="example-chip" onclick="loadExample('sigma_lsass')">LSASS access rule</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Options -->
+    <div class="options-row">
+      <div class="opt-group">
+        <span class="opt-label">Environment</span>
+        <select class="opt-select" id="opt-env">
+          <option value="corporate_windows">Corporate Windows</option>
+          <option value="hybrid">Hybrid (Windows + Cloud)</option>
+          <option value="cloud">Cloud (AWS / Azure / GCP)</option>
+          <option value="linux">Linux / Server</option>
+          <option value="ot_ics">OT / ICS</option>
+        </select>
+      </div>
+      <div class="opt-group">
+        <span class="opt-label">Focus</span>
+        <select class="opt-select" id="opt-focus">
+          <option value="full">Full playbook</option>
+          <option value="containment">Containment-focused</option>
+          <option value="recovery">Recovery-focused</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Generate -->
+    <button class="btn-generate" id="btn-gen" onclick="generate()">
+      📖 Generate Playbook
+    </button>
+
+    <!-- History -->
+    <div class="history-strip" id="history-strip"></div>
+
+    <!-- Loading -->
+    <div id="loading">
+      <div class="spinner-wrap">
+        <div class="spinner"></div>
+        <div class="spinner-text">Building incident response playbook…</div>
+      </div>
+    </div>
+
+    <!-- Results -->
+    <div id="results">
+
+      <!-- Status bar -->
+      <div class="status-bar" id="status-bar"></div>
+
+      <!-- Playbook header -->
+      <div class="playbook-header-card" id="playbook-header"></div>
+
+      <!-- Executive summary -->
+      <div class="exec-card" id="exec-card" style="display:none">
+        <div class="exec-header">
+          <div class="section-label" style="margin-bottom:0">📊 Executive Summary</div>
+          <button class="btn-copy" id="copy-exec" onclick="copyExec()">Copy</button>
+        </div>
+        <div class="exec-body" id="exec-body"></div>
+      </div>
+
+      <!-- Recommended tools -->
+      <div id="tools-wrap" style="display:none">
+        <div class="section-label" style="margin-bottom:8px">🛠 Recommended Tools</div>
+        <div class="tools-strip" id="tools-strip"></div>
+      </div>
+
+      <!-- Phase cards -->
+      <div class="section-label" style="margin-bottom:12px;margin-top:4px">⚙️ Response Phases</div>
+      <div class="phases-grid" id="phases-container"></div>
+
+      <!-- Lessons learned -->
+      <div class="lessons-card" id="lessons-card" style="display:none">
+        <div class="section-label">🎓 Post-Mortem Questions</div>
+        <div class="lessons-list" id="lessons-list"></div>
+      </div>
+
+      <!-- Export bar -->
+      <div class="export-bar">
+        <div class="export-actions">
+          <button class="btn-export" onclick="downloadMarkdown()">⬇ Download .md</button>
+          <button class="btn-export" onclick="downloadJSON()">⬇ Download .json</button>
+          <button class="btn-export" onclick="copyMarkdown()">Copy Markdown</button>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <a href="https://dgiry.github.io/sigma-generator" class="btn-bridge" target="_blank">✍️ SIGMA Generator →</a>
+          <a href="https://dgiry.github.io/alert-explainer"  class="btn-bridge" target="_blank">🚨 Alert Explainer →</a>
+        </div>
+      </div>
+
+    </div><!-- /results -->
+
+  </main>
+
+  <footer class="site-footer">
+    <a href="https://dgiry.github.io/defang-ioc"      class="footer-link">🧪 Defang IOC</a> ·
+    <a href="https://dgiry.github.io/ioc-pivot"       class="footer-link">🔭 IOC Pivot</a> ·
+    <a href="https://dgiry.github.io/cve-enricher"    class="footer-link">🔬 CVE Enricher</a> ·
+    <a href="https://dgiry.github.io/alert-explainer"  class="footer-link">🚨 Alert Explainer</a> ·
+    <a href="https://dgiry.github.io/sigma-generator"  class="footer-link">✍️ SIGMA Generator</a> ·
+    100% client-side · MIT License
+  </footer>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+  /* ═══════════════════════════════════════════════════════════
+     CONSTANTS
+  ═══════════════════════════════════════════════════════════ */
+  const KEY_STORAGE  = 'cv_oai_key';
+  const HIST_STORAGE = 'pb_history';
+  const MAX_HISTORY  = 5;
+
+  let currentTab = 'technique';
+  let lastResult = null;
+
+  /* ═══════════════════════════════════════════════════════════
+     PHASE CONFIG
+  ═══════════════════════════════════════════════════════════ */
+  const PHASE_COLORS = {
+    'Detection':    '#58a6ff',
+    'Triage':       '#d29922',
+    'Containment':  '#f0883e',
+    'Eradication':  '#f85149',
+    'Recovery':     '#3fb950',
+    'Post-Incident':'#a371f7',
+  };
+
+  /* ═══════════════════════════════════════════════════════════
+     EXAMPLES
+  ═══════════════════════════════════════════════════════════ */
+  const EXAMPLES = {
+    ps_exec: 'T1059.001 — Command and Scripting Interpreter: PowerShell\n\nCommon usage: malware droppers using Invoke-WebRequest + IEX to download and execute payloads. Also covers encoded commands (-EncodedCommand), constrained language bypass, and AMSI bypass techniques.',
+    lsass:   'T1003.001 — OS Credential Dumping: LSASS Memory\n\nCovers Mimikatz sekurlsa::logonpasswords, Procdump targeting lsass.exe, Task Manager dump, and comsvcs.dll MiniDump. Typically seen as a post-exploitation step after initial access.',
+    ransomware: 'T1486 — Data Encrypted for Impact\n\nRansomware deployment: mass file encryption using symmetric keys, shadow copy deletion (vssadmin delete shadows), and ransom note dropping. Common in Conti, LockBit, BlackCat variants.',
+    exploit: 'T1190 — Exploit Public-Facing Application\n\nExploitation of internet-facing services: web application vulnerabilities (SQL injection, RCE), VPN appliance exploits (Fortinet, Pulse Secure), Exchange ProxyShell/ProxyLogon. Entry vector for many APT campaigns.',
+    valid_accounts: 'T1078 — Valid Accounts\n\nAbuse of legitimate credentials for persistence and access. Includes domain accounts, local admin accounts, service accounts, and cloud IAM credentials obtained via phishing, credential stuffing, or purchase.',
+
+    ransomware_incident: 'Ransomware alert fired on a file server (FS-03). EDR detected mass file rename events with .locked extension. Approximately 4,000 files affected in C:\\SharedDrive\\Finance\\. Single endpoint. No evidence of lateral spread yet. User account: svc_backup (service account). System isolated from network.',
+    c2_callback: 'EDR alert: encoded PowerShell (base64) detected on workstation WS-112. Process: powershell.exe spawned by winword.exe. Outbound HTTPS connection to 185.220.101.47:443 immediately after. Process terminated by EDR. Hash: 44d88612fea8a8f36de82e1278abb02f. User: j.smith (standard user, Finance dept).',
+    brute_force: 'Microsoft Sentinel alert: 847 failed login attempts (Event 4625, LogonType 10 - RDP) from 91.198.174.33 over 12 minutes targeting 5 accounts on RDP-GW-01, followed by successful authentication (Event 4624) for account svc_backup. Session active. User has admin privileges.',
+    lateral_movement: 'Splunk alert: PsExec execution detected on workstation WS-042 (user: m.johnson). PsExec64.exe launched with -u domain\\administrator -p flags. Target host: DC-01. Connection established. Potential ransomware operator pivot pattern — WS-042 was the initial compromise point 3 hours ago.',
+
+    sigma_ps: `title: PowerShell Download and Execute
+id: a2b2f1c3-1234-5678-abcd-ef1234567890
+status: experimental
+description: Detects PowerShell using Invoke-WebRequest or DownloadFile followed by execution
+author: SIGMA Generator
+date: 2026-04-08
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    Image|endswith: '\\powershell.exe'
+    CommandLine|contains|all:
+      - 'DownloadFile'
+      - 'IEX'
+  condition: selection
+falsepositives:
+  - Legitimate admin scripts using WebRequest
+level: high
+tags:
+  - attack.t1059.001
+  - attack.t1105`,
+
+    sigma_lsass: `title: LSASS Memory Access by Non-System Process
+id: b3c3d2e4-2345-6789-bcde-f23456789012
+status: experimental
+description: Detects non-system processes accessing LSASS memory for credential dumping
+author: SIGMA Generator
+date: 2026-04-08
+logsource:
+  category: process_access
+  product: windows
+detection:
+  selection:
+    TargetImage|endswith: '\\lsass.exe'
+    GrantedAccess|contains:
+      - '0x1010'
+      - '0x1410'
+  filter:
+    SourceImage|startswith:
+      - 'C:\\Windows\\System32\\'
+      - 'C:\\Windows\\SysWOW64\\'
+  condition: selection and not filter
+falsepositives:
+  - Security products opening LSASS handles
+level: critical
+tags:
+  - attack.t1003.001`,
+  };
+
+  /* ═══════════════════════════════════════════════════════════
+     INIT
+  ═══════════════════════════════════════════════════════════ */
+  document.addEventListener('DOMContentLoaded', () => {
+    const saved = localStorage.getItem(KEY_STORAGE);
+    if (saved) document.getElementById('api-key').value = saved;
+
+    document.getElementById('api-key').addEventListener('change', e => {
+      const v = e.target.value.trim();
+      if (v) localStorage.setItem(KEY_STORAGE, v);
+    });
+
+    renderHistory();
+
+    // Query param deep-link support (?technique= | ?incident= | ?sigma= | ?input=)
+    const params = new URLSearchParams(location.search);
+    const sigma     = params.get('sigma');
+    const incident  = params.get('incident') || params.get('input') || params.get('alert');
+    const technique = params.get('technique');
+    if (sigma)          { switchTab('sigma');     document.getElementById('input-sigma').value     = decodeURIComponent(sigma); }
+    else if (incident)  { switchTab('incident');  document.getElementById('input-incident').value  = decodeURIComponent(incident); }
+    else if (technique) { switchTab('technique'); document.getElementById('input-technique').value = decodeURIComponent(technique); }
+  });
+
+  /* ═══════════════════════════════════════════════════════════
+     TAB SWITCHING
+  ═══════════════════════════════════════════════════════════ */
+  function switchTab(tab) {
+    currentTab = tab;
+    document.querySelectorAll('.input-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+    ['technique','incident','sigma'].forEach(t => {
+      document.getElementById('tab-' + t).style.display = t === tab ? '' : 'none';
+    });
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+     EXAMPLES
+  ═══════════════════════════════════════════════════════════ */
+  function loadExample(key) {
+    const isSigma    = key.startsWith('sigma_');
+    const isIncident = key.endsWith('_incident') || key === 'c2_callback' || key === 'brute_force' || key === 'lateral_movement';
+    const tab = isSigma ? 'sigma' : isIncident ? 'incident' : 'technique';
+    const inputId = { technique: 'input-technique', incident: 'input-incident', sigma: 'input-sigma' }[tab];
+    switchTab(tab);
+    document.getElementById(inputId).value = EXAMPLES[key] || '';
+    document.getElementById(inputId).focus();
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+     INPUT HELPER
+  ═══════════════════════════════════════════════════════════ */
+  function getInput() {
+    const map = { technique: 'input-technique', incident: 'input-incident', sigma: 'input-sigma' };
+    return (document.getElementById(map[currentTab])?.value || '').trim();
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+     GENERATE
+  ═══════════════════════════════════════════════════════════ */
+  async function generate() {
+    const key = (document.getElementById('api-key').value.trim() || localStorage.getItem(KEY_STORAGE) || '');
+    if (!key) { showError('Enter your OpenAI API key above.'); return; }
+
+    const input = getInput();
+    if (!input) { showError('Enter a MITRE technique, incident description, or SIGMA rule above.'); return; }
+
+    const env   = document.getElementById('opt-env').value;
+    const focus = document.getElementById('opt-focus').value;
+
+    hideError();
+    setLoading(true);
+    hideResults();
+
+    const prompt = buildPrompt(input, env, focus);
+
+    try {
+      const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${key}`
+        },
+        body: JSON.stringify({
+          model: document.getElementById('model-select').value,
+          temperature: 0.2,
+          response_format: { type: 'json_object' },
+          messages: [
+            { role: 'system', content: 'You are a senior Incident Response consultant. Write structured IR playbooks for Tier-2/3 analysts. Output JSON only — no markdown, no code fences, no prose outside the JSON object.' },
+            { role: 'user',   content: prompt }
+          ]
+        })
+      });
+
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        throw new Error(err.error?.message || `HTTP ${resp.status}`);
+      }
+
+      const data = await resp.json();
+      const raw  = data.choices?.[0]?.message?.content || '{}';
+      const r    = JSON.parse(raw);
+
+      if (!r.phases?.length) throw new Error('AI did not return playbook phases. Try rephrasing your input.');
+
+      lastResult = r;
+      localStorage.setItem(KEY_STORAGE, key);
+      saveHistory({ input: input.slice(0, 80), title: r.playbook_title || 'Playbook', tab: currentTab });
+      renderResults(r);
+
+    } catch(e) {
+      showError('Error: ' + e.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+     PROMPT BUILDER
+  ═══════════════════════════════════════════════════════════ */
+  function buildPrompt(input, env, focus) {
+    const inputHint = currentTab === 'technique'
+      ? 'The user provided a MITRE ATT&CK technique ID or name. Enrich with full attack context — what the technique enables, common tooling (real tool names like Mimikatz, Cobalt Strike, etc.), and real-world threat actor usage. Build a realistic, concrete playbook for an organization that has detected this technique actively in use.'
+      : currentTab === 'incident'
+      ? 'The user described an active security incident. Extract the attack technique(s), affected systems, observed behaviors, and timeline hints. Build a playbook that directly addresses THIS specific scenario — reference the concrete details provided (hostnames, accounts, IPs, file paths) in the steps where relevant.'
+      : 'The user pasted a SIGMA detection rule. Parse the rule\'s title, logsource, detection logic, level, and MITRE tags. Build a playbook specifically for when THIS rule fires in production — the steps should match the exact detection scenario.';
+
+    const envHint = {
+      corporate_windows: 'Environment: Corporate Windows AD environment. Assume tools: Windows Event Log, Sysmon, EDR (CrowdStrike/Defender), Splunk or Sentinel, Active Directory.',
+      hybrid:            'Environment: Hybrid Windows + Cloud (Azure/AWS). Include both on-prem and cloud-side response steps where relevant.',
+      cloud:             'Environment: Cloud-first (AWS / Azure / GCP). Focus on cloud-native logs, IAM, and CloudTrail/AuditLogs.',
+      linux:             'Environment: Linux / Server infrastructure. Focus on syslog, auditd, process monitoring, SSH logs.',
+      ot_ics:            'Environment: OT/ICS. Prioritize non-disruptive containment. Be cautious about isolation steps that could impact production systems.',
+    }[env];
+
+    const focusHint = focus === 'full'
+      ? 'Generate a full, balanced 6-phase playbook.'
+      : focus === 'containment'
+      ? 'Emphasize the Containment phase — make it the most detailed with the most steps and commands. Other phases can be shorter.'
+      : 'Emphasize the Recovery phase — make it the most detailed. Ensure recovery steps are comprehensive and include validation.';
+
+    return `You are a senior Incident Response consultant with 15+ years of DFIR experience. Your playbooks are used by Tier-2/3 analysts in active incidents.
+
+INPUT TYPE: ${inputHint}
+
+INPUT:
+"""
+${input}
+"""
+
+CONSTRAINTS:
+- ${envHint}
+- ${focusHint}
+- Severity: critical = active exfiltration or ransomware detonation; high = confirmed compromise or active attacker; medium = suspicious behavior requiring investigation; low = anomaly, likely FP
+- Generate exactly 6 phases in this order: Detection, Triage, Containment, Eradication, Recovery, Post-Incident
+- Each phase: 4-6 steps, 2-4 evidence_to_collect items, 1-3 escalation_criteria items
+- Steps: include a concrete command/query where one meaningfully exists. Never invent commands that don't work. Use real tool syntax.
+- command_type must be one of: spl, kql, bash, powershell, python, sql — or null if no command
+- recommended_tools: real, publicly available tools only (Volatility, Velociraptor, KAPE, Splunk, etc.)
+- mitre_techniques: minimum 2, maximum 6, include sub-techniques (e.g. T1059.001 not T1059)
+- executive_summary: 3-4 sentences for CISO audience — no jargon, what happened, what was done, current status
+- lessons_learned_prompts: 3-5 specific questions relevant to THIS incident type
+- escalation_target: null only for Post-Incident phase
+
+Return ONLY a valid JSON object with this exact structure:
+
+{
+  "playbook_title": "Max 12 words descriptive title",
+  "input_summary": "1-2 sentences: what was detected or provided as input",
+  "severity": "critical|high|medium|low",
+  "complexity": "simple|moderate|complex",
+  "severity_rationale": "1-2 sentences explaining the severity and complexity",
+  "mitre_techniques": [
+    { "id": "T1059.001", "name": "Command and Scripting Interpreter: PowerShell", "tactic": "Execution", "url": "https://attack.mitre.org/techniques/T1059/001/" }
+  ],
+  "recommended_tools": [
+    { "name": "Volatility", "purpose": "Memory forensics for process analysis", "phase": "Triage" }
+  ],
+  "phases": [
+    {
+      "name": "Detection",
+      "icon": "🔍",
+      "objective": "One sentence: what this phase achieves",
+      "steps": [
+        {
+          "order": 1,
+          "action": "Short imperative action (e.g. Query SIEM for matching events)",
+          "detail": "1-2 sentences of concrete guidance",
+          "command": "exact runnable command or query — or null",
+          "command_type": "spl|kql|bash|powershell|python|sql|null"
+        }
+      ],
+      "evidence_to_collect": ["Specific log source or artifact to preserve"],
+      "escalation_criteria": ["Condition that requires escalation"],
+      "escalation_target": "Who to escalate to — or null"
+    },
+    { "name": "Triage",       "icon": "🔎", ... },
+    { "name": "Containment",  "icon": "🛡️", ... },
+    { "name": "Eradication",  "icon": "🧹", ... },
+    { "name": "Recovery",     "icon": "🔄", ... },
+    { "name": "Post-Incident","icon": "📋", ..., "escalation_target": null }
+  ],
+  "executive_summary": "3-4 sentences for CISO audience",
+  "lessons_learned_prompts": [
+    "Specific post-mortem question relevant to this incident type"
+  ]
+}`;
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+     RENDER RESULTS
+  ═══════════════════════════════════════════════════════════ */
+  function renderResults(r) {
+    // Status bar
+    const sev   = (r.severity || 'medium').toLowerCase();
+    const comp  = (r.complexity || 'moderate');
+    const sevClass = { critical:'sev-critical', high:'sev-high', medium:'sev-medium', low:'sev-low' }[sev] || 'sev-medium';
+    const dotClass = { critical:'dot-critical', high:'dot-high',   medium:'dot-medium', low:'dot-low' }[sev] || 'dot-medium';
+    document.getElementById('status-bar').innerHTML = `
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="status-pill ${sevClass}"><span class="dot-pulse ${dotClass}"></span>${sev.toUpperCase()}</span>
+        <span class="badge badge-complexity">${comp}</span>
+      </div>
+      <div style="font-size:.78rem;color:var(--text2)">
+        ${escHtml(r.severity_rationale || '')}
+      </div>`;
+
+    // Playbook header
+    const mitreHtml = (r.mitre_techniques || []).map(t => {
+      const url = t.url || `https://attack.mitre.org/techniques/${t.id.replace('.','/')}`;
+      return `<a href="${url}" target="_blank" rel="noopener" class="mitre-chip">
+        <span class="mitre-id">${escHtml(t.id)}</span>
+        <span class="mitre-tactic">${escHtml(t.tactic || '')} · ${escHtml(t.name || '')}</span>
+      </a>`;
+    }).join('');
+    document.getElementById('playbook-header').innerHTML = `
+      <div class="playbook-header-title">${escHtml(r.playbook_title || 'Incident Response Playbook')}</div>
+      <div class="playbook-header-sub">${escHtml(r.input_summary || '')}</div>
+      <div class="mitre-grid">${mitreHtml || '<span style="font-size:.8rem;color:var(--text3)">No techniques mapped</span>'}</div>`;
+
+    // Executive summary
+    const execBody = document.getElementById('exec-body');
+    execBody.textContent = r.executive_summary || '';
+    document.getElementById('exec-card').style.display = r.executive_summary ? 'block' : 'none';
+
+    // Tools
+    const tools = r.recommended_tools || [];
+    const toolsWrap = document.getElementById('tools-wrap');
+    if (tools.length) {
+      document.getElementById('tools-strip').innerHTML = `
+        <span style="font-size:.75rem;color:var(--text3);align-self:center;font-weight:600">Tools:</span>` +
+        tools.map(t => `
+          <div class="tool-chip">
+            <span>${escHtml(t.name)}</span>
+            <span class="tool-phase">${escHtml(t.phase || '')}</span>
+          </div>`).join('');
+      toolsWrap.style.display = 'block';
+    } else {
+      toolsWrap.style.display = 'none';
+    }
+
+    // Phases
+    const container = document.getElementById('phases-container');
+    container.innerHTML = '';
+    const phases = r.phases || [];
+    // Pad to 6 if AI returned fewer
+    const phaseNames = ['Detection','Triage','Containment','Eradication','Recovery','Post-Incident'];
+    phaseNames.forEach((name, i) => {
+      const phase = phases[i] || { name, icon: '❓', objective: '', steps: [], evidence_to_collect: [], escalation_criteria: [], escalation_target: null };
+      container.innerHTML += renderPhase(phase, i);
+    });
+
+    // Wire cmd copy buttons
+    container.querySelectorAll('[data-cmd-copy]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const text = btn.closest('.cmd-block').querySelector('pre')?.textContent || '';
+        navigator.clipboard.writeText(text).then(() => {
+          const orig = btn.textContent;
+          btn.textContent = '✓';
+          btn.classList.add('copied');
+          setTimeout(() => { btn.textContent = orig; btn.classList.remove('copied'); }, 1800);
+        });
+      });
+    });
+
+    // Lessons learned
+    const lessons = r.lessons_learned_prompts || [];
+    const lessonsCard = document.getElementById('lessons-card');
+    if (lessons.length) {
+      document.getElementById('lessons-list').innerHTML = lessons.map((q, i) => `
+        <label class="lesson-item" id="lesson-${i}">
+          <input type="checkbox" onchange="toggleLesson(${i})">
+          <span>${escHtml(q)}</span>
+        </label>`).join('');
+      lessonsCard.style.display = 'block';
+    } else {
+      lessonsCard.style.display = 'none';
+    }
+
+    showResults();
+    document.getElementById('results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+     RENDER PHASE CARD
+  ═══════════════════════════════════════════════════════════ */
+  function renderPhase(phase, index) {
+    const color = PHASE_COLORS[phase.name] || '#8b949e';
+    const stepsHtml = (phase.steps || []).map((s, si) => {
+      const cmdHtml = renderCommandBlock(s, `${index}-${si}`);
+      return `
+        <div class="step-item">
+          <div class="step-action">
+            <span class="step-num">${s.order || (si + 1)}</span>
+            ${escHtml(s.action || '')}
+          </div>
+          ${s.detail ? `<div class="step-detail">${escHtml(s.detail)}</div>` : ''}
+          ${cmdHtml}
+        </div>`;
+    }).join('');
+
+    const evidenceHtml = (phase.evidence_to_collect || []).map(e =>
+      `<li>${escHtml(e)}</li>`).join('');
+
+    const escalationHtml = (phase.escalation_criteria || []).map(e =>
+      `<li>${escHtml(e)}</li>`).join('');
+
+    const escalationTarget = phase.escalation_target
+      ? `<div class="escalation-target">↑ Escalate to: ${escHtml(phase.escalation_target)}</div>` : '';
+
+    return `
+      <div class="phase-card" style="border-left:3px solid ${color}">
+        <div class="phase-header">
+          <span class="phase-icon">${phase.icon || '▶'}</span>
+          <div>
+            <div class="phase-name" style="color:${color}">${escHtml(phase.name)}</div>
+            ${phase.objective ? `<div class="phase-objective">${escHtml(phase.objective)}</div>` : ''}
+          </div>
+        </div>
+        <div class="phase-body">
+          <div class="steps-list">${stepsHtml}</div>
+          ${evidenceHtml ? `
+          <hr class="phase-divider">
+          <div class="phase-sub">
+            <div class="phase-sub-label">Evidence to collect</div>
+            <ul>${evidenceHtml}</ul>
+          </div>` : ''}
+          ${escalationHtml ? `
+          <hr class="phase-divider">
+          <div class="phase-sub">
+            <div class="phase-sub-label">Escalation</div>
+            <ul>${escalationHtml}</ul>
+            ${escalationTarget}
+          </div>` : ''}
+        </div>
+      </div>`;
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+     RENDER COMMAND BLOCK
+  ═══════════════════════════════════════════════════════════ */
+  function renderCommandBlock(step, id) {
+    if (!step.command || step.command === 'null' || step.command_type === 'null') return '';
+    const type  = (step.command_type || 'bash').toLowerCase();
+    const label = type === 'null' ? 'command' : type;
+    const typeClass = `cmd-type-${['spl','kql','bash','powershell','python','sql'].includes(type) ? type : 'other'}`;
+    return `
+      <div class="cmd-block">
+        <div class="cmd-block-header">
+          <span class="cmd-type-label ${typeClass}">${label}</span>
+          <button class="btn-copy" data-cmd-copy="${id}">Copy</button>
+        </div>
+        <pre>${escHtml(step.command)}</pre>
+      </div>`;
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+     LESSONS LEARNED
+  ═══════════════════════════════════════════════════════════ */
+  function toggleLesson(i) {
+    const item = document.getElementById(`lesson-${i}`);
+    if (item) item.classList.toggle('checked', item.querySelector('input').checked);
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+     EXPORT — MARKDOWN
+  ═══════════════════════════════════════════════════════════ */
+  function buildMarkdown() {
+    if (!lastResult) return '';
+    const r   = lastResult;
+    const ts  = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    const mitreIds = (r.mitre_techniques || []).map(t => t.id).join(', ');
+    let md = `# Incident Response Playbook: ${r.playbook_title || 'Untitled'}\n\n`;
+    md += `**Generated:** ${ts}  \n`;
+    md += `**Severity:** ${r.severity || '—'} | **Complexity:** ${r.complexity || '—'}  \n`;
+    md += `**MITRE:** ${mitreIds || '—'}\n\n`;
+    md += `## Executive Summary\n\n${r.executive_summary || ''}\n\n---\n\n`;
+
+    (r.phases || []).forEach(phase => {
+      md += `## ${phase.icon || ''} ${phase.name}\n\n`;
+      if (phase.objective) md += `**Objective:** ${phase.objective}\n\n`;
+      md += `### Steps\n\n`;
+      (phase.steps || []).forEach(s => {
+        md += `${s.order || ''}. **${s.action || ''}**  \n`;
+        if (s.detail) md += `   ${s.detail}\n`;
+        if (s.command && s.command_type !== 'null' && s.command !== 'null') {
+          md += `   \`\`\`${s.command_type || 'bash'}\n   ${s.command}\n   \`\`\`\n`;
+        }
+        md += `\n`;
+      });
+      if (phase.evidence_to_collect?.length) {
+        md += `### Evidence to Collect\n\n`;
+        phase.evidence_to_collect.forEach(e => { md += `- ${e}\n`; });
+        md += '\n';
+      }
+      if (phase.escalation_criteria?.length) {
+        md += `### Escalation\n\n`;
+        phase.escalation_criteria.forEach(e => { md += `- ${e}\n`; });
+        if (phase.escalation_target) md += `\n**Escalate to:** ${phase.escalation_target}\n`;
+        md += '\n';
+      }
+      md += '---\n\n';
+    });
+
+    if ((r.recommended_tools || []).length) {
+      md += `## Recommended Tools\n\n| Tool | Purpose | Phase |\n|------|---------|-------|\n`;
+      r.recommended_tools.forEach(t => { md += `| ${t.name} | ${t.purpose} | ${t.phase} |\n`; });
+      md += '\n';
+    }
+
+    if ((r.lessons_learned_prompts || []).length) {
+      md += `## Post-Mortem Questions\n\n`;
+      r.lessons_learned_prompts.forEach(q => { md += `- [ ] ${q}\n`; });
+      md += '\n';
+    }
+
+    return md;
+  }
+
+  function slugify(str) {
+    return (str || 'playbook').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40);
+  }
+
+  function downloadFile(filename, content, mime) {
+    const blob = new Blob([content], { type: mime });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a); URL.revokeObjectURL(url);
+  }
+
+  function downloadMarkdown() {
+    const md = buildMarkdown();
+    if (!md) { toast('No playbook to download yet'); return; }
+    const ts = new Date().toISOString().replace(/:/g, '-').replace(/\..+/, '');
+    downloadFile(`playbook-${slugify(lastResult?.playbook_title)}-${ts}.md`, md, 'text/markdown;charset=utf-8');
+    toast('Playbook downloaded ✓');
+  }
+
+  function downloadJSON() {
+    if (!lastResult) { toast('No playbook to download yet'); return; }
+    const ts = new Date().toISOString().replace(/:/g, '-').replace(/\..+/, '');
+    downloadFile(`playbook-${slugify(lastResult?.playbook_title)}-${ts}.json`, JSON.stringify(lastResult, null, 2), 'application/json');
+    toast('JSON downloaded ✓');
+  }
+
+  function copyMarkdown() {
+    const md = buildMarkdown();
+    if (!md) { toast('No playbook to copy yet'); return; }
+    navigator.clipboard.writeText(md).then(() => toast('Markdown copied ✓'));
+  }
+
+  function copyExec() {
+    const text = document.getElementById('exec-body')?.textContent || '';
+    navigator.clipboard.writeText(text).then(() => {
+      const btn = document.getElementById('copy-exec');
+      btn.textContent = '✓ Copied';
+      btn.classList.add('copied');
+      setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 1800);
+    });
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+     HISTORY
+  ═══════════════════════════════════════════════════════════ */
+  function saveHistory(entry) {
+    let h = [];
+    try { h = JSON.parse(localStorage.getItem(HIST_STORAGE) || '[]'); } catch {}
+    h.unshift(entry);
+    h = h.slice(0, MAX_HISTORY);
+    localStorage.setItem(HIST_STORAGE, JSON.stringify(h));
+    renderHistory();
+  }
+
+  function renderHistory() {
+    let h = [];
+    try { h = JSON.parse(localStorage.getItem(HIST_STORAGE) || '[]'); } catch {}
+    const strip = document.getElementById('history-strip');
+    if (!h.length) { strip.innerHTML = ''; return; }
+    strip.innerHTML = '<span style="font-size:.72rem;color:var(--text3);align-self:center;font-weight:600;text-transform:uppercase;letter-spacing:.06em">Recent:</span>' +
+      h.map((e, i) => `<button class="history-chip" onclick="loadFromHistory(${i})" title="${escHtml(e.input)}">${escHtml(e.title || e.input)}</button>`).join('');
+  }
+
+  function loadFromHistory(i) {
+    let h = [];
+    try { h = JSON.parse(localStorage.getItem(HIST_STORAGE) || '[]'); } catch {}
+    const e = h[i];
+    if (!e) return;
+    const tab = e.tab || 'technique';
+    const inputId = { technique: 'input-technique', incident: 'input-incident', sigma: 'input-sigma' }[tab];
+    switchTab(tab);
+    if (inputId) document.getElementById(inputId).value = e.input || '';
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+     UI HELPERS
+  ═══════════════════════════════════════════════════════════ */
+  function setLoading(on) {
+    document.getElementById('loading').style.display = on ? 'block' : 'none';
+    document.getElementById('btn-gen').disabled = on;
+  }
+  function showResults()  { document.getElementById('results').style.display = 'block'; }
+  function hideResults()  { document.getElementById('results').style.display = 'none'; }
+  function showError(msg) { const el = document.getElementById('error-box'); el.textContent = msg; el.style.display = 'block'; }
+  function hideError()    { document.getElementById('error-box').style.display = 'none'; }
+  function escHtml(s)     { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  function toast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2200);
+  }
+  </script>
+
+</body>
+</html>
