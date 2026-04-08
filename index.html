@@ -45,13 +45,6 @@
       --shadow:      0 4px 20px rgba(0,0,0,.4);
     }
 
-    /* Phase left-border colors */
-    --phase-detection:    #58a6ff;
-    --phase-triage:       #d29922;
-    --phase-containment:  #f0883e;
-    --phase-eradication:  #f85149;
-    --phase-recovery:     #3fb950;
-    --phase-postincident: #a371f7;
 
     /* ═══════════════════════════════════════════════════
        LAYOUT
@@ -885,11 +878,11 @@ tags:
       : 'The user pasted a SIGMA detection rule. Parse the rule\'s title, logsource, detection logic, level, and MITRE tags. Build a playbook specifically for when THIS rule fires in production — the steps should match the exact detection scenario.';
 
     const envHint = {
-      corporate_windows: 'Environment: Corporate Windows AD environment. Assume tools: Windows Event Log, Sysmon, EDR (CrowdStrike/Defender), Splunk or Sentinel, Active Directory.',
-      hybrid:            'Environment: Hybrid Windows + Cloud (Azure/AWS). Include both on-prem and cloud-side response steps where relevant.',
-      cloud:             'Environment: Cloud-first (AWS / Azure / GCP). Focus on cloud-native logs, IAM, and CloudTrail/AuditLogs.',
-      linux:             'Environment: Linux / Server infrastructure. Focus on syslog, auditd, process monitoring, SSH logs.',
-      ot_ics:            'Environment: OT/ICS. Prioritize non-disruptive containment. Be cautious about isolation steps that could impact production systems.',
+      corporate_windows: 'Environment: Corporate Windows AD environment. Tools available: Windows Event Log, Sysmon, EDR (CrowdStrike or Microsoft Defender for Endpoint), SIEM (Splunk or Sentinel), Active Directory, Group Policy. Use real PowerShell cmdlets, wevtutil, net commands, AD PowerShell module.',
+      hybrid:            'Environment: Hybrid Windows + Cloud (Azure/AWS). Include both on-prem AD steps AND cloud-side steps (Azure AD sign-in logs, AWS CloudTrail, IAM review). Split steps clearly between on-prem and cloud where relevant.',
+      cloud:             'Environment: Cloud-first (AWS / Azure / GCP). Focus on cloud-native response: CloudTrail, GuardDuty, Azure AD audit logs, IAM policy review, S3/blob access logs, Security Hub. Use AWS CLI and az CLI commands where applicable.',
+      linux:             'Environment: Linux / Server infrastructure. Tools: journalctl, auditd, syslog, ss, lsof, ps, find, last, who, netstat. Use real bash commands. Focus on process trees, network connections, cron jobs, SSH authorized_keys, SUID binaries.',
+      ot_ics:            'Environment: OT/ICS. CRITICAL: prefix every containment or eradication command with the note "⚠️ Validate with OT engineering before execution — risk of production impact." Prioritize passive monitoring over active blocking. Avoid network isolation unless confirmed safe with operations team.',
     }[env];
 
     const focusHint = focus === 'full'
@@ -913,12 +906,13 @@ CONSTRAINTS:
 - Severity: critical = active exfiltration or ransomware detonation; high = confirmed compromise or active attacker; medium = suspicious behavior requiring investigation; low = anomaly, likely FP
 - Generate exactly 6 phases in this order: Detection, Triage, Containment, Eradication, Recovery, Post-Incident
 - Each phase: 4-6 steps, 2-4 evidence_to_collect items, 1-3 escalation_criteria items
-- Steps: include a concrete command/query where one meaningfully exists. Never invent commands that don't work. Use real tool syntax.
-- command_type must be one of: spl, kql, bash, powershell, python, sql — or null if no command
-- recommended_tools: real, publicly available tools only (Volatility, Velociraptor, KAPE, Splunk, etc.)
+- Steps: NEVER produce vague steps like "investigate further", "monitor the situation", or "contact your team". Every step must be immediately actionable with a specific target (log source, tool, command, file path, or system). If a step has no concrete action, replace it with one that does.
+- Commands: use real, correct syntax only. No placeholder values like <hostname> or YOUR_IP unless the user must fill them in — in that case label clearly as [REPLACE: description]. Prefer one-liners. Test-quality syntax for PowerShell, bash, SPL, KQL.
+- escalation_criteria: must reference specific observable conditions — never generic phrases like "if the situation escalates" or "if things get worse". Good example: "Evidence of lateral movement to hosts beyond the initially compromised endpoint via PsExec or WMI." Bad example: "Escalate if the incident worsens."
+- executive_summary: must cover in order — (1) what was detected/observed and when, (2) which systems or accounts are affected, (3) what containment or response actions have been taken so far, (4) current status and recommended next step for leadership. Never open with "A cybersecurity incident occurred." Be specific.
+- recommended_tools: real, publicly available tools only (Volatility, Velociraptor, KAPE, Splunk, CyberChef, Wireshark, etc.)
 - mitre_techniques: minimum 2, maximum 6, include sub-techniques (e.g. T1059.001 not T1059)
-- executive_summary: 3-4 sentences for CISO audience — no jargon, what happened, what was done, current status
-- lessons_learned_prompts: 3-5 specific questions relevant to THIS incident type
+- lessons_learned_prompts: 3-5 specific questions relevant to THIS incident type — not generic like "what went wrong?" but specific like "Was the affected service account following least-privilege at the time of compromise?"
 - escalation_target: null only for Post-Incident phase
 
 Return ONLY a valid JSON object with this exact structure:
@@ -1283,7 +1277,7 @@ Return ONLY a valid JSON object with this exact structure:
   function hideResults()  { document.getElementById('results').style.display = 'none'; }
   function showError(msg) { const el = document.getElementById('error-box'); el.textContent = msg; el.style.display = 'block'; }
   function hideError()    { document.getElementById('error-box').style.display = 'none'; }
-  function escHtml(s)     { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  function escHtml(s)     { if (s == null) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
   function toast(msg) {
     const t = document.getElementById('toast');
     t.textContent = msg; t.classList.add('show');
