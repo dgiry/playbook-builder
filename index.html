@@ -745,6 +745,22 @@
     if (typeof showToast === 'function') showToast('Key saved');
   }
 
+  function _friendlyError(err, provider) {
+    const msg = err?.message || String(err);
+    if (msg.includes('Failed to parse URL') || msg.includes('Invalid URL'))
+      return 'Invalid Ollama URL — use http://localhost:11434';
+    if (msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('Load failed'))
+      return provider === 'ollama'
+        ? 'Ollama not reachable. Is it running? → ollama serve'
+        : 'Network error — check your connection and try again.';
+    if (msg.includes('401') || msg.toLowerCase().includes('invalid api key') || msg.toLowerCase().includes('incorrect api key'))
+      return 'Invalid API key for ' + provider + '. Check your key.';
+    if (msg.includes('429') || msg.toLowerCase().includes('rate limit'))
+      return 'Rate limit reached — wait a moment and retry.';
+    if (msg.match(/50[0-9]/)) return (provider || 'Server') + ' returned an error. Try again in a moment.';
+    return msg;
+  }
+
   function _getProviderConfig() {
     const provider = document.getElementById('provider-select')?.value
       || localStorage.getItem('cv_provider') || 'openai';
@@ -960,7 +976,7 @@ tags:
       renderResults(r);
 
     } catch(e) {
-      showError('Error: ' + e.message);
+      showError(_friendlyError(e, _getProviderConfig().provider));
     } finally {
       setLoading(false);
     }
