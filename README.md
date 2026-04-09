@@ -34,6 +34,21 @@ Given a MITRE technique, incident description, or SIGMA rule — generate a stru
 
 ---
 
+## AI providers
+
+Uses your own API key — no backend required. Supported providers:
+
+| Provider | Key stored as | Models available |
+|----------|--------------|-----------------|
+| **OpenAI** | `cv_oai_key` | gpt-4o-mini · gpt-4o · o4-mini |
+| **OpenRouter** | `cv_openrouter_key` | Claude Opus 4.5 · Claude Haiku · Gemini Flash · Llama 3.3 70B |
+| **Ollama** | `cv_ollama_url` | llama3.1 · mistral · qwen2.5 · gemma3 (local, no key required) |
+
+Provider preference is stored in `cv_provider` and shared across all suite tools.
+[OpenRouter](https://openrouter.ai) gives access to Claude, Gemini, and Llama without separate API accounts.
+
+---
+
 ## Options
 
 | Option | Values | Notes |
