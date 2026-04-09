@@ -108,6 +108,11 @@
       font-family: 'Inter', sans-serif;
     }
     .key-select option { background: var(--bg2); }
+    .provider-select {
+      background:var(--bg2); border:1px solid var(--border);
+      color:var(--text1); font-size:.76rem; padding:.35rem .55rem;
+      border-radius:var(--radius); outline:none; cursor:pointer;
+    }
 
     /* ═══════════════════════════════════════════════════
        INPUT SECTION
@@ -502,13 +507,17 @@
 
     <!-- API Key + Model -->
     <div class="key-row">
-      <span class="key-label">🔑 OpenAI API Key</span>
-      <input type="password" id="api-key" class="key-input" placeholder="sk-..." autocomplete="off">
+      <select id="provider-select" class="provider-select" onchange="onProviderChange()">
+        <option value="openai">OpenAI</option>
+        <option value="openrouter">OpenRouter</option>
+        <option value="ollama">Ollama (local)</option>
+      </select>
+      <input type="password" id="api-key" class="key-input" placeholder="sk-… (OpenAI key)" autocomplete="off">
       <select id="model-select" class="key-select">
         <option value="gpt-4o-mini">gpt-4o-mini (fast)</option>
         <option value="gpt-4o">gpt-4o (best)</option>
       </select>
-      <span class="key-badge">Stored in localStorage · Never transmitted except to OpenAI</span>
+      <button class="btn-sm" onclick="saveKey()">💾 Save key</button>
     </div>
 
     <!-- Error -->
@@ -675,6 +684,90 @@
   let currentTab = 'technique';
   let lastResult = null;
 
+  // ── Multi-provider support ─────────────────────────────────────────────────
+  const PROVIDER_MODELS = {
+    openai: [
+      { value: 'gpt-4o-mini',  label: 'gpt-4o-mini (fast)' },
+      { value: 'gpt-4o',       label: 'gpt-4o (best)' },
+      { value: 'o4-mini',      label: 'o4-mini (reasoning)' },
+    ],
+    openrouter: [
+      { value: 'anthropic/claude-opus-4-5',          label: 'Claude Opus 4.5 (best)' },
+      { value: 'anthropic/claude-haiku-4-5',         label: 'Claude Haiku 4.5 (fast)' },
+      { value: 'google/gemini-2.0-flash-001',        label: 'Gemini Flash 2.0' },
+      { value: 'meta-llama/llama-3.3-70b-instruct',  label: 'Llama 3.3 70B (free)' },
+    ],
+    ollama: [
+      { value: 'llama3.1',  label: 'llama3.1' },
+      { value: 'mistral',   label: 'mistral' },
+      { value: 'qwen2.5',   label: 'qwen2.5' },
+      { value: 'gemma3',    label: 'gemma3' },
+    ]
+  };
+
+  const PROVIDER_KEY_MAP = {
+    openai:      'cv_oai_key',
+    openrouter:  'cv_openrouter_key',
+    ollama:      'cv_ollama_url',
+  };
+
+  const PROVIDER_PLACEHOLDER = {
+    openai:     'sk-… (OpenAI)',
+    openrouter: 'sk-or-… (OpenRouter — openrouter.ai)',
+    ollama:     'http://localhost:11434 (or leave blank)',
+  };
+
+  function onProviderChange() {
+    const provider = document.getElementById('provider-select').value;
+    const keyEl    = document.getElementById('api-key-input') || document.getElementById('api-key');
+    const modelEl  = document.getElementById('model-select');
+
+    modelEl.innerHTML = PROVIDER_MODELS[provider]
+      .map(m => `<option value="${m.value}">${m.label}</option>`).join('');
+
+    if (keyEl) {
+      keyEl.placeholder = PROVIDER_PLACEHOLDER[provider];
+      keyEl.value = localStorage.getItem(PROVIDER_KEY_MAP[provider]) || '';
+      keyEl.type  = provider === 'ollama' ? 'text' : 'password';
+    }
+
+    localStorage.setItem('cv_provider', provider);
+  }
+
+  function saveKey() {
+    const provider = document.getElementById('provider-select')?.value || 'openai';
+    const keyEl    = document.getElementById('api-key-input') || document.getElementById('api-key');
+    const v = keyEl?.value.trim();
+    if (v) {
+      localStorage.setItem(PROVIDER_KEY_MAP[provider], v);
+      if (provider === 'openai') localStorage.setItem('cv_oai_key', v);
+    }
+    if (typeof showToast === 'function') showToast('Key saved');
+  }
+
+  function _getProviderConfig() {
+    const provider = document.getElementById('provider-select')?.value
+      || localStorage.getItem('cv_provider') || 'openai';
+    const model = document.getElementById('model-select')?.value || 'gpt-4o-mini';
+    const keyEl = document.getElementById('api-key-input') || document.getElementById('api-key');
+    const storedKey = localStorage.getItem(PROVIDER_KEY_MAP[provider]) || keyEl?.value.trim() || '';
+
+    let endpoint, headers;
+    if (provider === 'ollama') {
+      const base = storedKey || 'http://localhost:11434';
+      endpoint = base.replace(/\/$/, '') + '/v1/chat/completions';
+      headers  = { 'Content-Type': 'application/json' };
+    } else if (provider === 'openrouter') {
+      endpoint = 'https://openrouter.ai/api/v1/chat/completions';
+      headers  = { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + storedKey,
+                   'HTTP-Referer': location.href, 'X-Title': 'SecOps AI Suite' };
+    } else {
+      endpoint = 'https://api.openai.com/v1/chat/completions';
+      headers  = { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + storedKey };
+    }
+    return { provider, model, endpoint, headers, key: storedKey };
+  }
+
   /* ═══════════════════════════════════════════════════════════
      PHASE CONFIG
   ═══════════════════════════════════════════════════════════ */
@@ -764,6 +857,14 @@ tags:
       if (v) localStorage.setItem(KEY_STORAGE, v);
     });
 
+    // Restore provider preference
+    const savedProvider = localStorage.getItem('cv_provider') || 'openai';
+    const providerEl = document.getElementById('provider-select');
+    if (providerEl) {
+      providerEl.value = savedProvider;
+      onProviderChange(); // sync models and key field
+    }
+
     renderHistory();
 
     // Query param deep-link support (?technique= | ?incident= | ?sigma= | ?input=)
@@ -812,8 +913,8 @@ tags:
      GENERATE
   ═══════════════════════════════════════════════════════════ */
   async function generate() {
-    const key = (document.getElementById('api-key').value.trim() || localStorage.getItem(KEY_STORAGE) || '');
-    if (!key) { showError('Enter your OpenAI API key above.'); return; }
+    const { provider, model, endpoint, headers, key } = _getProviderConfig();
+    if (!key && provider !== 'ollama') { showError('Enter your API key for ' + provider); return; }
 
     const input = getInput();
     if (!input) { showError('Enter a MITRE technique, incident description, or SIGMA rule above.'); return; }
@@ -828,14 +929,11 @@ tags:
     const prompt = buildPrompt(input, env, focus);
 
     try {
-      const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+      const resp = await fetch(endpoint, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${key}`
-        },
+        headers,
         body: JSON.stringify({
-          model: document.getElementById('model-select').value,
+          model,
           temperature: 0.2,
           response_format: { type: 'json_object' },
           messages: [
