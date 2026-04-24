@@ -1366,7 +1366,7 @@ Return ONLY a valid JSON object with this exact structure:
   function downloadJSON() {
     if (!lastResult) { toast('No playbook to download yet'); return; }
     const ts = new Date().toISOString().replace(/:/g, '-').replace(/\..+/, '');
-    downloadFile(`playbook-${slugify(lastResult?.playbook_title)}-${ts}.json`, JSON.stringify(lastResult, null, 2), 'application/json');
+    downloadFile(`playbook-${slugify(lastResult?.playbook_title)}-${ts}.json`, JSON.stringify(lastResult, null, 2), 'application/json;charset=utf-8');
     toast('JSON downloaded ✓');
   }
 
