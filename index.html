@@ -346,6 +346,7 @@
     .cmd-type-powershell { color: #569cd6; }
     .cmd-type-python     { color: #ffd700; }
     .cmd-type-sql        { color: #d29922; }
+    .cmd-type-xdr        { color: #e8304a; }
     .cmd-type-null, .cmd-type-other { color: var(--text3); }
     .cmd-block pre {
       margin: 0; padding: 10px 12px;
@@ -998,7 +999,37 @@ tags:
       hybrid:            'Environment: Hybrid Windows + Cloud (Azure/AWS). Include both on-prem AD steps AND cloud-side steps (Azure AD sign-in logs, AWS CloudTrail, IAM review). Split steps clearly between on-prem and cloud where relevant.',
       cloud:             'Environment: Cloud-first (AWS / Azure / GCP). Focus on cloud-native response: CloudTrail, GuardDuty, Azure AD audit logs, IAM policy review, S3/blob access logs, Security Hub. Use AWS CLI and az CLI commands where applicable.',
       linux:             'Environment: Linux / Server infrastructure. Tools: journalctl, auditd, syslog, ss, lsof, ps, find, last, who, netstat. Use real bash commands. Focus on process trees, network connections, cron jobs, SSH authorized_keys, SUID binaries.',
-      trend_xdr:         'Environment: Trend Vision One XDR. Use Trend Vision One native tools and response actions throughout: XDR Search App queries (processCmd, processFilePath, eventSubId, dst, dpt, fileHash), Response Management console for host isolation and process termination, Workbench for alert correlation, and Vision One Threat Intelligence. For investigation steps, prefer XDR Search syntax over generic SIEM queries. Reference real Trend Vision One features: Observed Attack Techniques, Executive Dashboard, Impact Scope.',
+      trend_xdr:         `Environment: Trend Vision One (Vision One) XDR platform. Use Vision One native features throughout — do not use Splunk SPL, Microsoft Sentinel KQL, or external SIEM queries as primary investigation steps.
+
+DETECTION: Check Workbench for auto-correlated incident alerts. Review Observed Attack Techniques (OAT) under Detection Model Management. Use Executive Dashboard > Risk Index and Impact Scope to identify affected assets and lateral movement spread.
+
+INVESTIGATION — XDR Search App (use command_type "xdr" for all Search App queries):
+  • Process: objectCmd:"*powershell -enc*" AND objectFilePath:"*\\\\Temp\\\\*" AND endpointHostName:"WKSTN-01"
+  • Network: dst:45.33.32.156 AND dpt:443 AND eventName:TELEMETRY_CONNECTION
+  • File: objectHashId:"44d88612fea8a8f36de82e1278abb02f" OR objectFilePath:"*\\\\AppData\\\\Roaming\\\\*"
+  • Account: account:"CORP\\\\jsmith" AND eventSubId:TELEMETRY_ACCOUNT_LOGON_FAILED
+  • Key fields: endpointHostName, objectCmd, processFilePath, objectFilePath, objectHashId, objectSigner, dst, src, dpt, spt, eventSubId, eventName, account, riskLevel, tags
+
+RESPONSE ACTIONS (Response Management console):
+  • Isolate endpoint (maintains Vision One management channel)
+  • Terminate process by PID or image name
+  • Collect file or memory artifact from endpoint
+  • Delete suspicious file from endpoint
+  • Block IOC: add hash/IP/domain/URL to Suspicious Object List (SOL)
+  • Reset AD or Azure AD account password via Identity Security integration
+  • Run remote script via Remote Shell (PowerShell or bash)
+
+THREAT INTELLIGENCE:
+  • Submit file or URL to Vision One Sandbox (Threat Analysis Center) for behavioral detonation
+  • Query Vision One Threat Intelligence portal for hash/IP/domain reputation
+  • Reference Zero Day Initiative (ZDI) for CVE and exploit intelligence
+  • Use Vision One Intelligence Reports for threat actor TTP context
+
+DATA SOURCES (sensors feeding Search App):
+  • Endpoint: Apex One, Worry-Free Business Security, Trend Micro Security Agent
+  • Email: Cloud App Security (CAS), ScanMail for Exchange
+  • Network: Deep Discovery Inspector (DDI), Virtual Network Sensor (TIVNS)
+  • Cloud: Vision One Cloud Security (AWS, Azure, GCP posture and activity logs)`,
       ot_ics:            'Environment: OT/ICS. CRITICAL: prefix every containment or eradication command with the note "⚠️ Validate with OT engineering before execution — risk of production impact." Prioritize passive monitoring over active blocking. Avoid network isolation unless confirmed safe with operations team.',
     }[env];
 
@@ -1057,7 +1088,7 @@ Return ONLY a valid JSON object with this exact structure:
           "action": "Short imperative action (e.g. Query SIEM for matching events)",
           "detail": "1-2 sentences of concrete guidance",
           "command": "exact runnable command or query — or null",
-          "command_type": "spl|kql|bash|powershell|python|sql|null"
+          "command_type": "spl|kql|xdr|bash|powershell|python|sql|null"
         }
       ],
       "evidence_to_collect": ["Specific log source or artifact to preserve"],
@@ -1233,7 +1264,7 @@ Return ONLY a valid JSON object with this exact structure:
     if (!step.command || step.command === 'null' || step.command_type === 'null') return '';
     const type  = (step.command_type || 'bash').toLowerCase();
     const label = type === 'null' ? 'command' : type;
-    const typeClass = `cmd-type-${['spl','kql','bash','powershell','python','sql'].includes(type) ? type : 'other'}`;
+    const typeClass = `cmd-type-${['spl','kql','bash','powershell','python','sql','xdr'].includes(type) ? type : 'other'}`;
     return `
       <div class="cmd-block">
         <div class="cmd-block-header">
