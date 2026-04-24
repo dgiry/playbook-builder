@@ -1,0 +1,437 @@
+{
+  "manifest_version": "2.0",
+  "playbook_ref": "v1-pb-cve-2009-0238-cve-2026-32201",
+  "canonical_playbook_version": "2.0",
+  "status": "TEMPLATE — replace ALL placeholder values before activation. Do not use this file unmodified.",
+
+  "instructions": [
+    "1. Fill every <REPLACE:...> value with your tenant-specific data.",
+    "2. Set each feature_flag to true only if the capability is licensed, integrated, and confirmed reachable in your tenant.",
+    "3. Complete the query_field_validation section by running each field name against your XDR Search App schema before your first activation.",
+    "4. Confirm each permission in required_permissions is granted to the operator account that will run this playbook.",
+    "5. Rename this file to tenant_manifest.<your-tenant-id>.json after completing it — keep the template untouched."
+  ],
+
+  "tenant_config": {
+    "INTERNAL_IP_RANGES": {
+      "value": ["<REPLACE: CIDR range, e.g. 10.0.0.0/8>", "<REPLACE: add more as needed>"],
+      "type": "array[cidr]",
+      "required": true,
+      "used_by": ["Q-002 — filters out internal IPs from outbound connection results"],
+      "validation_note": "Must cover all RFC-1918 and any private-range IPs in use on your estate. Gaps here cause Q-002 to return internal IPs as false-positive external connections."
+    },
+    "SOL_TTL_DAYS": {
+      "value": "<REPLACE: integer — e.g. 30>",
+      "type": "integer",
+      "required": true,
+      "used_by": ["C-002 — sets TTL on all Suspicious Object Management entries", "R-004 — determines renewal check window"],
+      "validation_note": "Set per your organization's threat intelligence retention policy. Must exceed MONITORING_WINDOW_HOURS / 24 to avoid IOC expiry during the monitoring window."
+    },
+    "MONITORING_WINDOW_HOURS": {
+      "value": "<REPLACE: integer — e.g. 72>",
+      "type": "integer",
+      "required": true,
+      "used_by": ["R-002 — Q-006 post-release monitoring window", "R-003 — Workbench monitoring window", "R-004 — SOL TTL comparison"],
+      "validation_note": "Minimum recommended value is 72 hours (3 days). Must be less than SOL_TTL_DAYS * 24."
+    },
+    "APPROVAL_IR_LEAD": {
+      "value": "<REPLACE: IR Lead identity — email, username, or phone>",
+      "type": "string",
+      "required": true,
+      "used_by": ["APR-001 — contact for approval of C-001, C-004, R-001"],
+      "validation_note": "This person receives APR-001 requests. Must be reachable at incident time. Confirm out-of-hours escalation path is in place."
+    },
+    "APPROVAL_IR_MANAGER": {
+      "value": "<REPLACE: IR Manager identity — email, username, or phone>",
+      "type": "string",
+      "required": true,
+      "used_by": ["APR-001 — escalation target when APPROVAL_TIMEOUT_MINUTES elapses without approval"],
+      "validation_note": "This person is the escalation target only. Does not approve APR-001 — approval remains with IR Lead. On timeout, escalate here and wait."
+    },
+    "APPROVAL_TIMEOUT_MINUTES": {
+      "value": "<REPLACE: integer — e.g. 30>",
+      "type": "integer",
+      "required": true,
+      "used_by": ["APR-001 — triggers escalation to APPROVAL_IR_MANAGER when elapsed"],
+      "validation_note": "30 minutes is the recommended default. Set lower for high-severity incidents. Timeout triggers escalation only — it never auto-approves."
+    },
+    "PATCH_TEAM_CONTACT": {
+      "value": "<REPLACE: patch team contact — email, ticket queue, Slack channel, or phone>",
+      "type": "string",
+      "required": true,
+      "used_by": ["EH-001 — CVE patch deployment handoff at E-004", "PI-002 — estate-wide remediation at post-incident"],
+      "validation_note": "Must be the channel through which patch team accepts and acknowledges incident-driven patching requests. Confirm they can receive out-of-hours requests."
+    },
+    "PATCH_TEAM_SLA_HOURS": {
+      "value": "<REPLACE: integer — e.g. 24>",
+      "type": "integer",
+      "required": true,
+      "used_by": ["EH-001 — SLA timer for patch deployment confirmation"],
+      "validation_note": "R-001 is hard-blocked until EH-001 confirmation is received. If patch SLA exceeds your endpoint isolation tolerance, pre-negotiate a faster SLA for active incidents."
+    },
+    "FIREWALL_TEAM_CONTACT": {
+      "value": "<REPLACE: network security team contact — email, ticket queue, or phone>",
+      "type": "string",
+      "required": true,
+      "used_by": ["EH-002 — perimeter firewall IP block handoff at C-006"],
+      "validation_note": "Must be the channel through which perimeter firewall rules are requested and confirmed. Required when MALICIOUS_IPS is non-empty."
+    },
+    "FIREWALL_TEAM_SLA_HOURS": {
+      "value": "<REPLACE: integer — e.g. 4>",
+      "type": "integer",
+      "required": true,
+      "used_by": ["EH-002 — SLA timer for perimeter firewall rule confirmation"],
+      "validation_note": "R-001 is blocked until EH-002 confirmation received. Must be shorter than total expected containment duration."
+    },
+    "BACKUP_TEAM_CONTACT": {
+      "value": "<REPLACE: backup and recovery team contact — email or phone>",
+      "type": "string",
+      "required": true,
+      "used_by": ["EH-003 — conditional backup restore handoff at R-005"],
+      "validation_note": "This handoff is conditional — only activated if E-002 fails or endpoint integrity cannot be confirmed. Confirm contact even if you do not expect to need it."
+    },
+    "IDENTITY_TEAM_CONTACT": {
+      "value": "<REPLACE: identity and directory services team contact — email or phone>",
+      "type": "string",
+      "required": true,
+      "used_by": ["EH-004 — account reset fallback when FEATURE_IDENTITY_SECURITY = false"],
+      "validation_note": "Only activated when FEATURE_IDENTITY_SECURITY = false or IDENTITY_INTEGRATION_TYPE = none. If FEATURE_IDENTITY_SECURITY = true, RA-007 handles account reset natively and this contact is standby only."
+    },
+    "POST_INCIDENT_REPORT_OWNER": {
+      "value": "<REPLACE: post-incident report distribution owner — email or name>",
+      "type": "string",
+      "required": true,
+      "used_by": ["EH-005 — post-incident report distribution at PI-004"],
+      "validation_note": "This person receives the full evidence package and is responsible for management report distribution and IR documentation update."
+    }
+  },
+
+  "feature_flags": {
+    "FEATURE_IDENTITY_SECURITY": {
+      "value": false,
+      "type": "boolean",
+      "required": true,
+      "set_true_if": "Identity Security integration is configured, IDENTITY_INTEGRATION_TYPE is not none, and integration status = Connected in Vision One",
+      "fallback_if_false": "EH-004 activates — C-004 account reset becomes an external handoff to identity team",
+      "affects_steps": ["C-004", "RA-007"]
+    },
+    "FEATURE_ASRM": {
+      "value": false,
+      "type": "boolean",
+      "required": true,
+      "set_true_if": "Attack Surface Risk Management is licensed and asset data is populated for affected endpoint types",
+      "fallback_if_false": "Skip T-001 and PI-002 — document risk prioritization and estate exposure assessment gaps",
+      "affects_steps": ["T-001", "PI-002"]
+    },
+    "FEATURE_SANDBOX": {
+      "value": false,
+      "type": "boolean",
+      "required": true,
+      "set_true_if": "Threat Analysis Center is enabled in tenant and SANDBOX_QUOTA_REMAINING > 0",
+      "fallback_if_false": "Skip T-004 — proceed directly to T-005 Threat Intelligence lookup. Document that behavioral detonation was not performed.",
+      "affects_steps": ["T-004", "RA-008"]
+    },
+    "FEATURE_NETWORK_SENSOR": {
+      "value": false,
+      "type": "boolean",
+      "required": true,
+      "set_true_if": "A network sensor is deployed and feeding telemetry to this Vision One tenant",
+      "fallback_if_false": "Q-002 uses endpoint-reported network telemetry only — coverage may be incomplete for server-class endpoints. Document telemetry scope.",
+      "affects_steps": ["D-004"]
+    },
+    "FEATURE_DETECTION_MODEL_MGMT": {
+      "value": false,
+      "type": "boolean",
+      "required": true,
+      "set_true_if": "Detection Model Management edit access (not read-only) is confirmed for the operator account",
+      "fallback_if_false": "Skip D-002 and PI-001 — document detection coverage gap and escalate tuning recommendation to tenant administrator",
+      "affects_steps": ["D-002", "PI-001"]
+    },
+    "SENSOR_ENDPOINT_TYPE": {
+      "value": "<REPLACE: one of: apex_one | worry_free | security_agent>",
+      "type": "enum",
+      "required": true,
+      "allowed_values": ["apex_one", "worry_free", "security_agent"],
+      "validation_note": "Used to validate telemetry field availability. Some event types and field names differ across sensor types. Confirm with the query_field_validation section."
+    },
+    "IDENTITY_INTEGRATION_TYPE": {
+      "value": "none",
+      "type": "enum",
+      "required": true,
+      "allowed_values": ["azure_ad", "on_prem_ad", "hybrid", "none"],
+      "validation_note": "Set to none if FEATURE_IDENTITY_SECURITY = false. If hybrid: confirm both Azure AD token revocation and on-prem session termination are in scope for RA-007."
+    },
+    "SANDBOX_QUOTA_REMAINING": {
+      "value": null,
+      "type": "integer",
+      "required": false,
+      "validation_note": "Check current quota in Threat Analysis Center before each playbook activation if FEATURE_SANDBOX = true. A value of 0 overrides FEATURE_SANDBOX for the T-004 step — treat as false."
+    }
+  },
+
+  "required_permissions": [
+    {
+      "permission": "Response Management — Endpoint Isolation (write)",
+      "required_for_steps": ["C-001 (isolate)", "R-001 (release)"],
+      "catalog_ref": "RA-001, RA-005"
+    },
+    {
+      "permission": "Response Management — Process Termination (write)",
+      "required_for_steps": ["C-003"],
+      "catalog_ref": "RA-002"
+    },
+    {
+      "permission": "Response Management — File Collection (write)",
+      "required_for_steps": ["C-005"],
+      "catalog_ref": "RA-003"
+    },
+    {
+      "permission": "Response Management — File Deletion (write)",
+      "required_for_steps": ["E-001"],
+      "catalog_ref": "RA-004"
+    },
+    {
+      "permission": "Suspicious Object Management (write)",
+      "required_for_steps": ["C-002"],
+      "catalog_ref": "RA-006"
+    },
+    {
+      "permission": "Identity Security — Account Response (write)",
+      "required_for_steps": ["C-004"],
+      "catalog_ref": "RA-007",
+      "conditional": "Only required if FEATURE_IDENTITY_SECURITY = true"
+    },
+    {
+      "permission": "Threat Analysis Center (write / submission)",
+      "required_for_steps": ["T-004"],
+      "catalog_ref": "RA-008",
+      "conditional": "Only required if FEATURE_SANDBOX = true"
+    },
+    {
+      "permission": "XDR Search App (read / query execution)",
+      "required_for_steps": ["D-003", "D-004", "T-002", "T-003", "E-002", "R-002"]
+    },
+    {
+      "permission": "Workbench (read)",
+      "required_for_steps": ["D-001", "E-003", "R-003", "PI-003"]
+    },
+    {
+      "permission": "Detection Model Management (write / edit access)",
+      "required_for_steps": ["D-002", "PI-001"],
+      "conditional": "Only required if FEATURE_DETECTION_MODEL_MGMT = true. Read-only access is insufficient for PI-001 tuning."
+    },
+    {
+      "permission": "Attack Surface Risk Management (read)",
+      "required_for_steps": ["T-001", "PI-002"],
+      "conditional": "Only required if FEATURE_ASRM = true"
+    }
+  ],
+
+  "query_field_validation": {
+    "instructions": "Before first playbook activation, validate each field name in your tenant's XDR Search App schema. Enter your confirmed tenant-local field name in the 'tenant_field_name' key. Mark 'validated' as true only after confirmed with a live test query. Fields marked false will cause query failures at execution time.",
+
+    "Q-001": {
+      "query_name": "exploit_child_process_chain",
+      "used_by_step": "D-003",
+      "fields": [
+        {
+          "canonical_field": "processFilePath",
+          "tenant_field_name": "<REPLACE or confirm: processFilePath>",
+          "validated": false,
+          "validation_note": "Must contain parent process executable image path"
+        },
+        {
+          "canonical_field": "objectFilePath",
+          "tenant_field_name": "<REPLACE or confirm: objectFilePath>",
+          "validated": false,
+          "validation_note": "Must contain spawned child process image path"
+        },
+        {
+          "canonical_field": "eventName",
+          "expected_value": "TELEMETRY_PROCESS",
+          "tenant_field_name": "<REPLACE or confirm: eventName>",
+          "validated": false,
+          "validation_note": "Confirm TELEMETRY_PROCESS is a valid eventName value in this tenant's schema"
+        },
+        {
+          "canonical_field": "endpointHostName",
+          "tenant_field_name": "<REPLACE or confirm: endpointHostName>",
+          "validated": false,
+          "validation_note": "Confirm field is consistently populated by your deployed sensor type"
+        },
+        {
+          "canonical_field": "eventTime",
+          "tenant_field_name": "<REPLACE or confirm: eventTime>",
+          "validated": false,
+          "validation_note": "Confirm time range filter bracket syntax matches your Search App version"
+        }
+      ]
+    },
+
+    "Q-002": {
+      "query_name": "post_exploit_outbound_connections",
+      "used_by_step": "D-004",
+      "fields": [
+        {
+          "canonical_field": "eventName",
+          "expected_value": "TELEMETRY_CONNECTION",
+          "tenant_field_name": "<REPLACE or confirm: eventName>",
+          "validated": false,
+          "validation_note": "Confirm TELEMETRY_CONNECTION is a valid eventName value"
+        },
+        {
+          "canonical_field": "endpointHostName",
+          "tenant_field_name": "<REPLACE or confirm: endpointHostName>",
+          "validated": false,
+          "validation_note": "Same as Q-001"
+        },
+        {
+          "canonical_field": "dst",
+          "tenant_field_name": "<REPLACE or confirm: dst>",
+          "validated": false,
+          "validation_note": "Must contain destination IP address string for NOT exclusion of INTERNAL_IP_RANGES"
+        },
+        {
+          "canonical_field": "dpt",
+          "tenant_field_name": "<REPLACE or confirm: dpt>",
+          "validated": false,
+          "validation_note": "Must represent destination port number — used to filter for known C2 ports"
+        },
+        {
+          "canonical_field": "eventTime",
+          "tenant_field_name": "<REPLACE or confirm: eventTime>",
+          "validated": false,
+          "validation_note": "Same as Q-001"
+        }
+      ]
+    },
+
+    "Q-003": {
+      "query_name": "lateral_movement_indicators",
+      "used_by_step": "T-002",
+      "fields": [
+        {
+          "canonical_field": "objectCmd",
+          "tenant_field_name": "<REPLACE: objectCmd OR commandLine OR processCmd — validate exact name>",
+          "validated": false,
+          "validation_note": "CRITICAL — field name varies across sensor types and tenant configurations. Validate before use. Wrong field name returns silent zero results, not an error."
+        },
+        {
+          "canonical_field": "eventName",
+          "expected_value": "TELEMETRY_PROCESS",
+          "tenant_field_name": "<REPLACE or confirm: eventName>",
+          "validated": false,
+          "validation_note": "Same as Q-001"
+        },
+        {
+          "canonical_field": "endpointHostName",
+          "tenant_field_name": "<REPLACE or confirm: endpointHostName>",
+          "validated": false,
+          "validation_note": "Same as Q-001"
+        }
+      ]
+    },
+
+    "Q-004": {
+      "query_name": "lsass_process_access",
+      "used_by_step": "T-003",
+      "fields": [
+        {
+          "canonical_field": "eventName",
+          "expected_value": "TELEMETRY_PROCESS_ACCESS",
+          "tenant_field_name": "<REPLACE or confirm: eventName>",
+          "validated": false,
+          "validation_note": "TELEMETRY_PROCESS_ACCESS requires process access auditing enabled at sensor configuration level. Confirm this event type appears in your tenant before relying on this query."
+        },
+        {
+          "canonical_field": "objectFilePath",
+          "tenant_field_name": "<REPLACE or confirm: objectFilePath>",
+          "validated": false,
+          "validation_note": "Must refer to target process path (lsass.exe) — distinct from the accessing process"
+        },
+        {
+          "canonical_field": "processFilePath",
+          "tenant_field_name": "<REPLACE or confirm: processFilePath>",
+          "validated": false,
+          "validation_note": "Must contain accessing process path — used for exclusion filtering of known-legitimate LSASS accessors"
+        },
+        {
+          "canonical_field": "endpointHostName",
+          "tenant_field_name": "<REPLACE or confirm: endpointHostName>",
+          "validated": false,
+          "validation_note": "Same as Q-001"
+        }
+      ],
+      "telemetry_dependency_note": "If TELEMETRY_PROCESS_ACCESS events are absent from your tenant: T-003 cannot confirm or deny LSASS access. Document the telemetry gap before proceeding."
+    },
+
+    "Q-005": {
+      "query_name": "eradication_clean_state_verification",
+      "used_by_step": "E-002",
+      "fields": [
+        {
+          "canonical_field": "objectHashId",
+          "tenant_field_name": "<REPLACE: objectHashId OR fileHash OR objectFileHashSha256 — validate exact name>",
+          "validated": false,
+          "validation_note": "CRITICAL — field name varies across tenants. Wrong field name causes Q-005 to return zero results regardless of payload presence, invalidating the clean-state verification."
+        },
+        {
+          "canonical_field": "eventName",
+          "expected_value": "TELEMETRY_FILE",
+          "tenant_field_name": "<REPLACE or confirm: eventName>",
+          "validated": false,
+          "validation_note": "Confirm TELEMETRY_FILE is a valid eventName for file system events in this tenant"
+        },
+        {
+          "canonical_field": "endpointHostName",
+          "tenant_field_name": "<REPLACE or confirm: endpointHostName>",
+          "validated": false,
+          "validation_note": "Same as Q-001"
+        }
+      ]
+    },
+
+    "Q-006": {
+      "query_name": "post_release_risk_monitoring",
+      "used_by_step": "R-002",
+      "fields": [
+        {
+          "canonical_field": "riskLevel",
+          "tenant_field_name": "<REPLACE or confirm: riskLevel>",
+          "validated": false,
+          "validation_note": "Confirm riskLevel is populated by your endpoint sensor and searchable in XDR Search App. Value set (high, critical) may vary by sensor type and configuration — validate exact values used."
+        },
+        {
+          "canonical_field": "eventName",
+          "expected_value": "TELEMETRY_PROCESS",
+          "tenant_field_name": "<REPLACE or confirm: eventName>",
+          "validated": false,
+          "validation_note": "Same as Q-001"
+        },
+        {
+          "canonical_field": "endpointHostName",
+          "tenant_field_name": "<REPLACE or confirm: endpointHostName>",
+          "validated": false,
+          "validation_note": "Same as Q-001"
+        },
+        {
+          "canonical_field": "eventTime",
+          "tenant_field_name": "<REPLACE or confirm: eventTime>",
+          "validated": false,
+          "validation_note": "Used for post-release window scoping — confirm bracket syntax for open-ended future window"
+        }
+      ]
+    }
+  },
+
+  "activation_checklist": [
+    { "item": "All tenant_config values replaced — no remaining <REPLACE:...> placeholders", "confirmed": false },
+    { "item": "All feature_flags set to reflect actual tenant capability — not defaulted to false without verification", "confirmed": false },
+    { "item": "All query_field_validation fields validated with live test query — validated: true for all fields", "confirmed": false },
+    { "item": "All required_permissions confirmed granted to the operator account for this incident", "confirmed": false },
+    { "item": "APPROVAL_IR_LEAD and APPROVAL_IR_MANAGER confirmed reachable at current time", "confirmed": false },
+    { "item": "AFFECTED_ENDPOINTS populated from Workbench Impact Scope (D-001) before first containment action", "confirmed": false },
+    { "item": "TIME_WINDOW_START and TIME_WINDOW_END set from Workbench incident timeline", "confirmed": false },
+    { "item": "Playbook activation documented in Workbench incident record with timestamp and operator identity", "confirmed": false }
+  ]
+}
