@@ -1001,29 +1001,33 @@ tags:
       linux:             'Environment: Linux / Server infrastructure. Tools: journalctl, auditd, syslog, ss, lsof, ps, find, last, who, netstat. Use real bash commands. Focus on process trees, network connections, cron jobs, SSH authorized_keys, SUID binaries.',
       trend_xdr:         `Environment: Trend Vision One (Vision One) XDR platform. Use Vision One native features throughout — do not use Splunk SPL, Microsoft Sentinel KQL, or external SIEM queries as primary investigation steps.
 
+CRITICAL RULES — READ BEFORE GENERATING:
+1. XDR QUERIES: use command_type "xdr". Build queries from incident input values only — DO NOT copy placeholder hostnames, IPs, hashes, or account names from this prompt into the output. Use [REPLACE: description] for any value the analyst must fill in at runtime.
+2. RESPONSE MANAGEMENT ACTIONS (isolate endpoint, terminate process, collect file, delete file, block IOC in SOL, reset account password): these are Vision One console actions with no CLI equivalent. Always set command: null, command_type: "null". Put the action description in the "detail" field (e.g. "In Response Management, isolate the endpoint to cut network access while preserving the Vision One management channel."). NEVER generate fake CLI commands such as taskkill, collect_memory, del, add_to_SOL, reset_password, or restore_backup — these do not exist.
+3. RECOMMENDED TOOLS: list only Vision One modules — Workbench, XDR Search App, Response Management, Suspicious Object Management, Threat Analysis Center, Identity Security, Attack Surface Risk Management, Detection Model Management, Threat Intelligence. Do NOT list Volatility, Wireshark, Velociraptor, KAPE, or any external forensic tool.
+
 DETECTION: Check Workbench for auto-correlated incident alerts. Review Observed Attack Techniques (OAT) under Detection Model Management. Use Executive Dashboard > Risk Index and Impact Scope to identify affected assets and lateral movement spread.
 
-INVESTIGATION — XDR Search App (use command_type "xdr" for all Search App queries):
-  • Process: objectCmd:"*powershell -enc*" AND objectFilePath:"*\\\\Temp\\\\*" AND endpointHostName:"WKSTN-01"
-  • Network: dst:45.33.32.156 AND dpt:443 AND eventName:TELEMETRY_CONNECTION
-  • File: objectHashId:"44d88612fea8a8f36de82e1278abb02f" OR objectFilePath:"*\\\\AppData\\\\Roaming\\\\*"
-  • Account: account:"CORP\\\\jsmith" AND eventSubId:TELEMETRY_ACCOUNT_LOGON_FAILED
+INVESTIGATION — XDR Search App query syntax (FORMAT EXAMPLES ONLY — derive all field values from the actual incident input, never copy these literal examples):
+  • Process:  objectCmd:"*[attacker_tool_pattern]*" AND endpointHostName:"[REPLACE: affected hostname]" AND eventName:TELEMETRY_PROCESS
+  • Network:  dst:[REPLACE: malicious IP] AND dpt:[REPLACE: port] AND eventName:TELEMETRY_CONNECTION AND endpointHostName:"[REPLACE: affected hostname]"
+  • File:     objectHashId:"[REPLACE: SHA-256 hash]" AND endpointHostName:([REPLACE: affected hostnames])
+  • Account:  account:"[REPLACE: DOMAIN\\user]" AND eventSubId:TELEMETRY_ACCOUNT_LOGON_FAILED
   • Key fields: endpointHostName, objectCmd, processFilePath, objectFilePath, objectHashId, objectSigner, dst, src, dpt, spt, eventSubId, eventName, account, riskLevel, tags
 
-RESPONSE ACTIONS (Response Management console):
-  • Isolate endpoint (maintains Vision One management channel)
+RESPONSE ACTIONS (Vision One console — no CLI, always command: null):
+  • Isolate endpoint — maintains Vision One management channel
   • Terminate process by PID or image name
   • Collect file or memory artifact from endpoint
   • Delete suspicious file from endpoint
-  • Block IOC: add hash/IP/domain/URL to Suspicious Object List (SOL)
+  • Block IOC — add hash/IP/domain/URL to Suspicious Object List (SOL)
   • Reset AD or Azure AD account password via Identity Security integration
-  • Run remote script via Remote Shell (PowerShell or bash)
+  • Run remote script via Remote Shell (PowerShell or bash) — only action with a real command field
 
 THREAT INTELLIGENCE:
-  • Submit file or URL to Vision One Sandbox (Threat Analysis Center) for behavioral detonation
-  • Query Vision One Threat Intelligence portal for hash/IP/domain reputation
+  • Submit file or URL to Threat Analysis Center (sandbox) for behavioral detonation
+  • Query Threat Intelligence portal for hash/IP/domain reputation
   • Reference Zero Day Initiative (ZDI) for CVE and exploit intelligence
-  • Use Vision One Intelligence Reports for threat actor TTP context
 
 DATA SOURCES (sensors feeding Search App):
   • Endpoint: Apex One, Worry-Free Business Security, Trend Micro Security Agent
@@ -1058,7 +1062,7 @@ CONSTRAINTS:
 - Commands: use real, correct syntax only. No placeholder values like <hostname> or YOUR_IP unless the user must fill them in — in that case label clearly as [REPLACE: description]. Prefer one-liners. Test-quality syntax for PowerShell, bash, SPL, KQL.
 - escalation_criteria: must reference specific observable conditions — never generic phrases like "if the situation escalates" or "if things get worse". Good example: "Evidence of lateral movement to hosts beyond the initially compromised endpoint via PsExec or WMI." Bad example: "Escalate if the incident worsens."
 - executive_summary: must cover in order — (1) what was detected/observed and when, (2) which systems or accounts are affected, (3) what containment or response actions have been taken so far, (4) current status and recommended next step for leadership. Never open with "A cybersecurity incident occurred." Be specific.
-- recommended_tools: real, publicly available tools only (Volatility, Velociraptor, KAPE, Splunk, CyberChef, Wireshark, etc.)
+- recommended_tools: real tools only — for non-Vision One environments: external forensic tools (Volatility, Velociraptor, KAPE, Splunk, CyberChef, Wireshark, etc.). For Vision One environment: Vision One modules only per environment rules above.
 - mitre_techniques: minimum 2, maximum 6, include sub-techniques (e.g. T1059.001 not T1059)
 - lessons_learned_prompts: 3-5 specific questions relevant to THIS incident type — not generic like "what went wrong?" but specific like "Was the affected service account following least-privilege at the time of compromise?"
 - escalation_target: null only for Post-Incident phase
